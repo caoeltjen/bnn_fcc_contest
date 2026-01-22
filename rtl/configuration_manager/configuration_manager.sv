@@ -1,0 +1,1 @@
+module configuration_manager
