@@ -64,6 +64,8 @@
 // TIMEOUT                   - Realtime value that specifies the maximum amount of time the testbench is
 //                             allowed to run before being terminated. Adjust based on the expected 
 //                             performance of your design.
+// CLK_PERIOD                - Realtime value specifying the clock period.
+// DEBUG                     - Set to print model details and an inference trace for each layer.
 //
 // [Bus Configuration]
 // CONFIG_BUS_WIDTH          - Bit-width for configuration bus (AXI streaming)
@@ -75,24 +77,25 @@
 // OUTPUT_DATA_WIDTH         - Bit-width of individual output elements
 //
 // [DUT Configuration]       (TODO: Adapt to your own DUT if necessary. Feel free to create, ignore, and/or remove parameters)
-// PARALLELIZE_LAYERS        - Enable pipelining across multiple layers
-// PARALLEL_NEURONS          - Number of neurons processed in parallel
-// PARALLEL_INPUTS           - Number of inputs/weights processed in parallel per neuron
+// PARALLEL_INPUTS           - Number of inputs/weights processed in parallel in the first hidden layer.
+// PARALLEL_NEURONS          - Number of neurons processed in parallel in each non-input layer.
 
 `timescale 1ns / 100ps
 
 module bnn_fcc_tb #(
     // Testbench configuration
-    parameter int      USE_CUSTOM_TOPOLOGY                           = 1'b0,
+    parameter int      USE_CUSTOM_TOPOLOGY                           = 1'b1,
     parameter int      CUSTOM_LAYERS                                 = 4,
-    parameter int      CUSTOM_TOPOLOGY               [CUSTOM_LAYERS] = '{8, 4, 4, 2},
+    parameter int      CUSTOM_TOPOLOGY               [CUSTOM_LAYERS] = '{8, 8, 8, 8},
     parameter int      NUM_TEST_IMAGES                               = 10,
     parameter bit      VERIFY_SV_MODEL_AGAINST_PYTHON                = 1,
     parameter string   BASE_DIR                                      = "../python",
-    parameter bit      TOGGLE_DATA_OUT_READY                         = 1'b1,
+    parameter bit      TOGGLE_DATA_OUT_READY                         = 1'b0,
     parameter real     CONFIG_VALID_PROBABILITY                      = 1.0,
     parameter real     DATA_IN_VALID_PROBABILITY                     = 1.0,
     parameter realtime TIMEOUT                                       = 10ms,
+    parameter realtime CLK_PERIOD                                    = 10ns,
+    parameter bit      DEBUG                                         = 1'b1,
 
     // Bus configuration
     parameter int CONFIG_BUS_WIDTH = 64,
@@ -105,22 +108,25 @@ module bnn_fcc_tb #(
     localparam int BYTES_PER_INPUT   = INPUT_DATA_WIDTH / 8,
     parameter  int OUTPUT_DATA_WIDTH = 4,
 
-    // DUT configuration (can be extended for your own DUT)
-    parameter bit PARALLELIZE_LAYERS = 1'b0,
-    parameter int PARALLEL_NEURONS = 1,
-    parameter int PARALLEL_INPUTS = 4
+    // Should not be changed
+    localparam int TRAINED_LAYERS = 4,
+    localparam int TRAINED_TOPOLOGY[TRAINED_LAYERS] = '{784, 256, 256, 10},
+
+    // DUT configuration (can be modified or extended for your own DUT)        
+    localparam int NON_INPUT_LAYERS = USE_CUSTOM_TOPOLOGY ? CUSTOM_LAYERS - 1 : TRAINED_LAYERS - 1,
+    parameter int PARALLEL_INPUTS = 8,
+    parameter int PARALLEL_NEURONS[NON_INPUT_LAYERS] = '{default: 8}
 );
     import bnn_fcc_tb_pkg::*;
-
-    localparam int TRAINED_LAYERS = 4;
-    localparam int TRAINED_TOPOLOGY[TRAINED_LAYERS] = '{784, 256, 256, 10};
 
     localparam int ACTUAL_TOTAL_LAYERS = USE_CUSTOM_TOPOLOGY ? CUSTOM_LAYERS : TRAINED_LAYERS;
     localparam int ACTUAL_TOPOLOGY[ACTUAL_TOTAL_LAYERS] = USE_CUSTOM_TOPOLOGY ? CUSTOM_TOPOLOGY : TRAINED_TOPOLOGY;
 
     localparam string MNIST_TEST_VECTOR_INPUT_PATH = "test_vectors/inputs.hex";
     localparam string MNIST_TEST_VECTOR_OUTPUT_PATH = "test_vectors/expected_outputs.txt";
-    localparam string MNIST_MODEL_DATA_PATH = "training_data";
+    localparam string MNIST_MODEL_DATA_PATH = "model_data";
+
+    localparam realtime HALF_CLK_PERIOD = CLK_PERIOD / 2.0;
 
     initial begin
         assert (INPUT_DATA_WIDTH == 8)
@@ -135,6 +141,8 @@ module bnn_fcc_tb #(
 
     BNN_FCC_Model #(CONFIG_BUS_WIDTH) model;
     BNN_FCC_Stimulus #(INPUT_DATA_WIDTH) stim;
+    LatencyTracker latency;
+    ThroughputTracker throughput;
 
     typedef bit [CONFIG_BUS_WIDTH-1:0] config_bus_word_t;
     typedef config_bus_word_t config_bus_data_stream_t[];
@@ -175,16 +183,15 @@ module bnn_fcc_tb #(
     );
 
     bnn_fcc #(
-        .INPUT_DATA_WIDTH  (INPUT_DATA_WIDTH),
-        .INPUT_BUS_WIDTH   (INPUT_BUS_WIDTH),
-        .CONFIG_BUS_WIDTH  (CONFIG_BUS_WIDTH),
-        .OUTPUT_DATA_WIDTH (OUTPUT_DATA_WIDTH),
-        .OUTPUT_BUS_WIDTH  (OUTPUT_BUS_WIDTH),
-        .TOTAL_LAYERS      (ACTUAL_TOTAL_LAYERS),
-        .TOPOLOGY          (ACTUAL_TOPOLOGY),
-        .PARALLELIZE_LAYERS(PARALLELIZE_LAYERS),
-        .PARALLEL_NEURONS  (PARALLEL_NEURONS),
-        .PARALLEL_INPUTS   (PARALLEL_INPUTS)
+        .INPUT_DATA_WIDTH (INPUT_DATA_WIDTH),
+        .INPUT_BUS_WIDTH  (INPUT_BUS_WIDTH),
+        .CONFIG_BUS_WIDTH (CONFIG_BUS_WIDTH),
+        .OUTPUT_DATA_WIDTH(OUTPUT_DATA_WIDTH),
+        .OUTPUT_BUS_WIDTH (OUTPUT_BUS_WIDTH),
+        .TOTAL_LAYERS     (ACTUAL_TOTAL_LAYERS),
+        .TOPOLOGY         (ACTUAL_TOPOLOGY),
+        .PARALLEL_INPUTS  (PARALLEL_INPUTS),
+        .PARALLEL_NEURONS (PARALLEL_NEURONS)
     ) DUT (
         .clk(clk),
         .rst(rst),
@@ -209,7 +216,7 @@ module bnn_fcc_tb #(
     );
 
     initial begin : generate_clock
-        forever #5 clk <= ~clk;
+        forever #HALF_CLK_PERIOD clk <= ~clk;
     end
 
     task verify_model();
@@ -251,7 +258,9 @@ module bnn_fcc_tb #(
     initial begin : l_init_model
         string path;
         model = new();
-        stim  = new(ACTUAL_TOPOLOGY[0]);
+        stim = new(ACTUAL_TOPOLOGY[0]);
+        latency = new(CLK_PERIOD);
+        throughput = new(CLK_PERIOD);
 
         if (!USE_CUSTOM_TOPOLOGY) begin
             // Load Weights & Configure Memory
@@ -279,7 +288,9 @@ module bnn_fcc_tb #(
         num_tests = stim.get_num_vectors();
         model.print_summary();
 
-        // NOTE: You can debug by looking at the model's weights, thresholds, and layer ouputs. 
+        if (DEBUG) model.print_model();
+
+        // NOTE: You can also debug by looking at the model's weights, thresholds, and layer ouputs. 
         // For example, this prints the model for all neurons in the first hidden layer:
         // for (int i = 0; i < ACTUAL_TOPOLOGY[1]; i++) model.print_neuron(0, i);      
         //
@@ -343,6 +354,8 @@ module bnn_fcc_tb #(
         end
         config_in.tvalid <= 1'b0;
         config_in.tlast  <= 1'b0;
+
+        wait (data_in.tready);
         repeat (5) @(posedge clk);
 
         for (int i = 0; i < num_tests; i++) begin
@@ -360,7 +373,10 @@ module bnn_fcc_tb #(
 
             // Stream image into DUT.
             $display("[%0t] Streaming image %0d.", $realtime, i);
+            if (DEBUG) model.print_inference_trace();
+
             for (int j = 0; j < current_img.size(); j += INPUTS_PER_CYCLE) begin
+
                 // Pack multiple pixels into a single AXI beat.
                 for (int k = 0; k < INPUTS_PER_CYCLE; k++) begin
                     if (j + k < current_img.size()) begin
@@ -382,6 +398,12 @@ module bnn_fcc_tb #(
                 data_in.tvalid <= 1'b1;
                 data_in.tlast  <= (j + INPUTS_PER_CYCLE >= current_img.size());
                 @(posedge clk iff data_in.tready);
+
+                // Start the throughput timer after the first beat of the first image has been accepted.                
+                if (i == 0 && j == 0) throughput.start_test();
+
+                // Start the latency timer after the first beat of each image has been accepted.                
+                if (j == 0) latency.start_event(i);
             end
 
             data_in.tvalid <= 1'b0;
@@ -395,8 +417,15 @@ module bnn_fcc_tb #(
         repeat (5) @(posedge clk);
 
         disable generate_clock;
-        if (passed == num_tests) $display("SUCCESS: all %0d tests completed successfully.", num_tests);
+        disable l_timeout;
+        if (passed == num_tests) $display("[%0t] SUCCESS: all %0d tests completed successfully.", $realtime, num_tests);
         else $error("FAILED: %0d out of %0d tests failed.", failed, num_tests);
+
+        $display("\nStats:");
+        $display("Avg latency (cycles) per image: %0.1f cycles", latency.get_avg_cycles());
+        $display("Avg latency (time) per image: %0.1f ns", latency.get_avg_time());
+        $display("Avg throughput (outputs/sec): %0.1f", throughput.get_outputs_per_sec(NUM_TEST_IMAGES));
+        $display("Avg throughput (cycles/output): %0.1f", throughput.get_avg_cycles_per_output(NUM_TEST_IMAGES));
     end
 
     initial begin : l_toggle_ready
@@ -411,6 +440,7 @@ module bnn_fcc_tb #(
     end
 
     initial begin : l_output_monitor
+        automatic int output_count = 0;
         forever begin
             @(posedge clk iff data_out.tvalid && data_out.tready);
             assert (expected_outputs.size() > 0)
@@ -418,10 +448,13 @@ module bnn_fcc_tb #(
             assert (data_out.tdata == expected_outputs[0]) begin
                 passed++;
             end else begin
-                $error("Output incorrect: actual = %0d vs expected = %0d", data_out.tdata, expected_outputs[0]);
+                $error("Output incorrect for image %0d: actual = %0d vs expected = %0d", output_count, data_out.tdata, expected_outputs[0]);
                 failed++;
             end
             void'(expected_outputs.pop_front());
+            latency.end_event(output_count);
+            if (output_count == NUM_TEST_IMAGES - 1) throughput.sample_end();
+            output_count++;
         end
     end
 

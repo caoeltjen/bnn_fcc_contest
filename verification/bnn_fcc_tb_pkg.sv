@@ -27,21 +27,22 @@ package bnn_fcc_tb_pkg;
         typedef bus_keep_t keep_stream_t[];
 
         // Dimensions: [ LAYER ][ NEURON ][ INPUT_BIT ]
-        layer_t      weight       [];
+        layer_t            weight       [];
 
         // Dimensions: [ LAYER ][ NEURON ]
-        thresh_row_t threshold    [];
+        thresh_row_t       threshold    [];
 
         // Dimensions: [ LAYER ][ NEURON ]
-        int          layer_outputs[] [];
+        int                layer_outputs[] [];
 
-        int          num_layers;
+        int                num_layers;
 
         //  [Inputs, L0_Neurons, L1_Neurons, ...]
-        int          topology     [];
+        int                topology     [];
 
-        bit          is_loaded           = 0;
-        bit          outputs_valid       = 0;
+        bit                is_loaded           = 0;
+        bit                outputs_valid       = 0;
+        bit          [7:0] last_input   [];
 
         function new();
             is_loaded     = 0;
@@ -56,6 +57,7 @@ package bnn_fcc_tb_pkg;
                 $fatal(1, "BNN_FCC_Model Error: Attempted to use model before loading weights! Call load_from_file() or create_random() first.");
             end
 
+            this.last_input = img_data;
             this.layer_outputs = new[num_layers];
 
             for (int l = 0; l < num_layers; l++) begin
@@ -190,7 +192,7 @@ package bnn_fcc_tb_pkg;
                     for (int b = 0; b < bytes_per_neuron; b++) begin
                         for (int k = 0; k < 8; k++) begin
                             if (w_idx < fan_in) byte_val[k] = this.weight[layer_idx][n][w_idx];
-                            else byte_val[k] = 1'b1; // Pad unused bits in the byte
+                            else byte_val[k] = 1'b1;  // Pad unused bits in the byte
                             w_idx++;
                         end
                         byte_q.push_back(byte_val);
@@ -342,7 +344,7 @@ package bnn_fcc_tb_pkg;
                     int temp_t;
 
                     temp_w = new[n_inputs];
-                    if (!std::randomize(temp_w)) $fatal(1, "Rand Fail Weights");
+                    if (!std::randomize(temp_w)) $fatal(1, "Randomizing weights failed.");
                     this.weight[l][n] = temp_w;
 
                     if (!std::randomize(
@@ -355,7 +357,7 @@ package bnn_fcc_tb_pkg;
                                 [0 : n_inputs] := 20
                             };
                         })
-                        $fatal(1, "Rand Fail Thresholds");
+                        $fatal(1, "Randomizing thresholds failed.");
                     this.threshold[l][n] = temp_t;
                 end
 
@@ -425,6 +427,157 @@ package bnn_fcc_tb_pkg;
 
             $write("\n");
             $display("-------------------------------------------------------");
+        endfunction
+
+        function void print_model(bit msb_first = 1);
+            $display("\n====================================================");
+            $display("FULL MODEL CONFIGURATION DUMP (Order: %s First)", msb_first ? "MSB" : "LSB");
+            $display("====================================================");
+            for (int l = 0; l < num_layers; l++) begin
+                $display("\n>>> LAYER %0d <<<", l);
+                for (int n = 0; n < topology[l+1]; n++) begin
+                    this.print_neuron(l, n, msb_first);
+                end
+            end
+            $display("\n====================================================\n");
+        endfunction
+
+        // Prints inputs, per-neuron popcounts/thresholds, and layer outputs.                
+        function void print_inference_trace(bit msb_first = 1);
+            int l, n, i;
+            int fan_in, n_neurons;
+            int popcount;
+            bit in_bit, w_bit;
+            int out_val;
+            int bits_printed;
+
+            if (this.layer_outputs.size() == 0) begin
+                $display("Error: No inference results. Run compute_reference() first.");
+                return;
+            end
+
+            $display("\n=== BNN INFERENCE DEBUG TRACE ===");
+
+            // Print image input in hex.
+            $display("Input Vector (%0d bytes, shown as 0 to %0d):", this.last_input.size(), this.last_input.size() - 1);
+            $write("  0x");
+            foreach (this.last_input[x]) begin
+                $write("%02h", this.last_input[x]);
+                if ((x + 1) % 32 == 0 && x != this.last_input.size() - 1) $write("\n    ");
+            end
+            $write("\n");
+
+            // Print binarized input
+            fan_in = this.last_input.size();
+            if (!msb_first) $write("Input Bits (Idx 0 -> N): ");
+            else $write("Input Bits (Idx N -> 0): ");
+
+            bits_printed = 0;
+            if (!msb_first) begin
+                for (i = 0; i < fan_in; i++) begin
+                    in_bit = (this.last_input[i] >= 8'd128);
+                    $write("%b", in_bit);
+                    bits_printed++;
+                    if (i < fan_in - 1 && bits_printed % 8 == 0) $write("_");
+                end
+            end else begin
+                for (i = fan_in - 1; i >= 0; i--) begin
+                    in_bit = (this.last_input[i] >= 8'd128);
+                    $write("%b", in_bit);
+                    bits_printed++;
+                    if (i > 0 && bits_printed % 8 == 0) $write("_");
+                end
+            end
+            $write("\n");
+
+            // Print each layer.
+            for (l = 0; l < num_layers; l++) begin
+                int max_pop = -1;
+                int argmax;
+
+                fan_in = this.topology[l];
+                n_neurons = this.topology[l+1];
+
+                $display("\nLAYER %0d (%0d Inputs -> %0d Neurons):", l, fan_in, n_neurons);
+
+                for (n = 0; n < n_neurons; n++) begin
+                    popcount = 0;
+
+                    // Recalculate popcount (this could potentially be saved from compute_reference())
+                    for (i = 0; i < fan_in; i++) begin
+                        if (l == 0) in_bit = (this.last_input[i] >= 8'd128) ? 1'b1 : 1'b0;
+                        else in_bit = (this.layer_outputs[l-1][i] == 1) ? 1'b1 : 1'b0;
+
+                        w_bit = this.weight[l][n][i];
+                        if (in_bit == w_bit) popcount++;
+                    end
+
+                    out_val = this.layer_outputs[l][n];
+
+                    // Print neuron info
+                    if (l == num_layers - 1) $write("  Neuron %3d: Pop=%3d (Argmax) -> Out=%0d", n, popcount, out_val);
+                    else $write("  Neuron %3d: Pop=%3d (Thresh=%3d) -> Out=%b", n, popcount, this.threshold[l][n], 1'(out_val));
+
+                    // Track argmax for the output layer.
+                    if (popcount > max_pop) begin
+                        argmax = n;
+                        max_pop = popcount;
+                    end
+
+                    // Print weights used by current neuron
+                    $write(" | W: ");
+                    bits_printed = 0;
+
+                    if (!msb_first) begin
+                        for (i = 0; i < fan_in; i++) begin
+                            $write("%b", this.weight[l][n][i]);
+                            bits_printed++;
+                            if (i < fan_in - 1 && bits_printed % 8 == 0) $write("_");
+                        end
+                    end else begin
+                        for (i = fan_in - 1; i >= 0; i--) begin
+                            $write("%b", this.weight[l][n][i]);
+                            bits_printed++;
+                            if (i > 0 && bits_printed % 8 == 0) $write("_");
+                        end
+                    end
+                    $display("");
+                end
+
+                // Print layer outputs
+                if (l < num_layers - 1) begin
+                    if (!msb_first) $write("  Layer %0d Output Bits (Idx 0 -> N): ", l);
+                    else $write("  Layer %0d Output Bits (Idx N -> 0): ", l);
+
+                    bits_printed = 0;
+                    if (!msb_first) begin
+                        for (n = 0; n < n_neurons; n++) begin
+                            $write("%b", 1'(this.layer_outputs[l][n]));
+                            bits_printed++;
+
+                            if (n < n_neurons - 1) begin
+                                if (bits_printed % 64 == 0) $write("\n                                           ");
+                                else if (bits_printed % 8 == 0) $write("_");
+                            end
+                        end
+                    end else begin
+                        for (n = n_neurons - 1; n >= 0; n--) begin
+                            $write("%b", 1'(this.layer_outputs[l][n]));
+                            bits_printed++;
+
+                            if (n > 0) begin
+                                if (bits_printed % 64 == 0) $write("\n                                           ");
+                                else if (bits_printed % 8 == 0) $write("_");
+                            end
+                        end
+                    end
+                    $display("");
+                end else begin
+                    $display("  Layer %0d Argmax: %0d, (Popcount: %0d)", l, argmax, max_pop);
+                end
+            end
+
+            $display("=================================\n");
         endfunction
 
     endclass
@@ -521,6 +674,70 @@ package bnn_fcc_tb_pkg;
             if (!std::randomize(result)) $fatal(1, "BNN_FCC_Stimulus: Randomization failed");
         endfunction
 
+    endclass
+
+    class LatencyTracker;
+        local realtime start_times[int];
+        local real     latencies_cycles [$];
+        local realtime latencies_time   [$];
+        real           clock_period_ns;
+
+        function new(real period);
+            this.clock_period_ns = period;
+        endfunction
+
+        function void start_event(int id);
+            start_times[id] = $realtime;
+        endfunction
+
+        function void end_event(int id);
+            if (start_times.exists(id)) begin
+                realtime dur = $realtime - start_times[id];
+                latencies_time.push_back(dur);
+                latencies_cycles.push_back(dur / clock_period_ns);
+                start_times.delete(id);
+            end else begin
+                $warning("LatencyTracker: end_event called for unknown ID %0d", id);
+            end
+        endfunction
+
+        function real get_avg_cycles();
+            return (latencies_cycles.size() > 0) ? (latencies_cycles.sum() / latencies_cycles.size()) : 0;
+        endfunction
+
+        function realtime get_avg_time();
+            return (latencies_time.size() > 0) ? (latencies_time.sum() / latencies_time.size()) : 0;
+        endfunction
+    endclass
+
+    class ThroughputTracker;
+        local realtime first_start_time;
+        local realtime last_end_time;
+        real           clock_period_ns;
+
+        function new(real period);
+            this.clock_period_ns = period;
+            this.first_start_time = 0;
+            this.last_end_time    = 0;
+        endfunction
+
+        function void start_test();
+            if (first_start_time == 0) first_start_time = $realtime;
+        endfunction
+
+        function void sample_end();
+            last_end_time = $realtime;
+        endfunction
+
+        function real get_outputs_per_sec(int total_count);
+            realtime total_window = last_end_time - first_start_time;
+            return (total_window > 0) ? (total_count / (total_window * 1e-9)) : 0;
+        endfunction
+
+        function real get_avg_cycles_per_output(int total_count);
+            realtime total_window = last_end_time - first_start_time;
+            return (total_count > 0) ? (real'(total_window) / (clock_period_ns * total_count)) : 0;
+        endfunction
     endclass
 
 endpackage
