@@ -1,12 +1,57 @@
 module neuron #(
-    parameter int INPUT_DATA_WIDTH,
-    parameter int WEIGHT_DATA_WIDTH,
-    parameter int OUTPUT_DATA_WIDTH
+    parameter int PW = 8,
+    parameter int THRESH_W = 16
 ) (
-    input logic [INPUT_DATA_WIDTH-1:0]  input_data,
-    input logic [WEIGHT_DATA_WIDTH-1:0] weight_data,
-    // no threshold value for output neurons
-    output logic [OUTPUT_DATA_WIDTH-1:0] output_data
+    input logic [PW-1:0]         x,
+    input logic [PW-1:0]         w,
+    // NO THRESHOLD FOR OUTPUT NEURON
+
+    input logic                  clk,
+    input logic                  rst,
+    input logic                  valid_in,
+    input logic                  last,
+
+    output logic                 valid_out,
+    output logic [THRESH_W-1:0]  popcount_out
 );
+
+logic [THRESH_W-1:0] popcount; // luh accumulator
+
+logic [PW-1:0] xnored; // xnored bits
+logic [$clog2(PW+1)-1:0] pc; // popcount of each beat
+
+int i;
+
+always_comb begin
+    xnored = x ~^ w; // xnor bits
+    pc = '0; // reset temp popcount
+    for(i = 0; i < PW; i++) begin
+        pc += xnored[i]; // compute new popcount
+    end
+end
+
+always_ff @(posedge clk or posedge rst) begin
+    
+    valid_out <= 1'b0; // default 0
+
+    if(valid_in) begin // if input valid
+        logic[THRESH_W-1:0] new_popcount; // temp new popcount
+        new_popcount = popcount + pc; // update new popcount
+
+        if(last) begin // if last beat
+            popcount_out <= new_popcount; // set output to new popcount
+            valid_out <= 1'b1; // set valid out
+            popcount <= '0; // reset popcount
+        end else begin
+            popcount <= new_popcount; // else update popcount signal
+        end
+    end
+    if (rst) begin // reset logic
+        popcount <= '0;
+        valid_out <= 1'b0;
+        popcount_out <= '0;
+    end
+end
+
 
 endmodule
