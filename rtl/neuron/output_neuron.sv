@@ -35,15 +35,12 @@ always_ff @(posedge clk or posedge rst) begin
     valid_out <= 1'b0; // default 0
 
     if(valid_in) begin // if input valid
-        logic[THRESH_W-1:0] new_popcount; // temp new popcount
-        new_popcount = popcount + pc; // update new popcount
-
         if(last) begin // if last beat
-            popcount_out <= new_popcount; // set output to new popcount
+            popcount_out <= popcount + pc;
             valid_out <= 1'b1; // set valid out
             popcount <= '0; // reset popcount
         end else begin
-            popcount <= new_popcount; // else update popcount signal
+            popcount <= popcount + pc; // else update popcount signal
         end
     end
     if (rst) begin // reset logic
@@ -52,6 +49,5 @@ always_ff @(posedge clk or posedge rst) begin
         popcount_out <= '0;
     end
 end
-
 
 endmodule
