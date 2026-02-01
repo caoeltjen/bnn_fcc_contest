@@ -1,0 +1,26 @@
+# Questa/Modelsim
+**/work/
+**/qrun.out/
+design.bin
+transcript
+*.log
+*.db
+*.wlf
+
+# Linux system/network temp files
+.nfs*
+
+# Quartus
+incremental_db/
+db/
+output_files/
+*.qws
+
+# Vivado
+*.jou
+
+# Misc.
+*.log
+
+# Python
+.venv*

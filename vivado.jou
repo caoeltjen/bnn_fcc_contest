@@ -22,3 +22,15 @@
 # Available Virtual  : 9781 MB
 #-----------------------------------------------------------
 start_gui
+xhub::refresh_catalog [xhub::get_xstores xilinx_board_store]
+set_param board.repoPaths {/home/jollux/.Xilinx/Vivado/2025.1/xhub/board_store/xilinx_board_store}
+xhub::install [xhub::get_xitems digilentinc.com:xilinx_board_store:zedboard:1.1]
+xhub::install [xhub::get_xitems avnet.com:xilinx_board_store:zedboard:1.4]
+xhub::refresh_catalog [xhub::get_xstores xilinx_board_store]
+xhub::install [xhub::get_xitems digilentinc.com:xilinx_board_store:zybo:1.0]
+xhub::install [xhub::get_xitems digilentinc.com:xilinx_board_store:zybo-z7-10:1.2]
+xhub::install [xhub::get_xitems digilentinc.com:xilinx_board_store:zybo-z7-20:1.2]
+create_project project_1 /home/jollux/Stitt-Comp/bnn_fcc_contest/vivado/project_1 -part xc7vx415tffv1927-1
+add_files {/home/jollux/Stitt-Comp/bnn_fcc_contest/rtl/bnn_fcc.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/rtl/neuron/output_neuron.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/rtl/binarize_input.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/rtl/configuration_manager/configuration_manager.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/rtl/neuron/neuron.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/verification/bnn_fcc_tb.sv /home/jollux/Stitt-Comp/bnn_fcc_contest/verification/axi4_stream_if.sv}
+update_compile_order -fileset sources_1
+update_compile_order -fileset sources_1

@@ -2,7 +2,7 @@ module binarize_input #(
     parameter int INPUT_DATA_WIDTH = 8
 ) (
     input logic [INPUT_DATA_WIDTH-1:0] data_in,
-    output logic                       data_out,
+    output logic                       data_out
 );
 
     always_comb begin
