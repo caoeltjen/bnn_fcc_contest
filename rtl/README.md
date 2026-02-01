@@ -13,9 +13,8 @@ The `bnn_fcc` module is a parameterized, fully-connected binary neural network c
 | `OUTPUT_BUS_WIDTH`  | Total width of the output AXI-Stream bus. |
 | `TOTAL_LAYERS`  | Total depth of the topology (Input + Hidden + Output). |
 | `TOPOLOGY` | Neurons per layer, with index 0 specifiying # of inputs (e.g., '{784, 256, 256, 10}). |
-| `PARALLELIZE_LAYERS`| Enable/disable pipelining between layers (optional). |
-| `PARALLEL_NEURONS` | Number of neurons calculated in parallel (optional). |
-| `PARALLEL_INPUTS`  | Number of inputs consumed simultaneously per neuron (optional). |
+| `PARALLEL_INPUTS`  | Number of inputs consumed simultaneously in the first hidden layer (optional). |
+| `PARALLEL_NEURONS` | Number of neurons calculated in parallel in each non-input layer (optional). |
 ---
 
 Your design most support all parameters except the parallelization configuration options. You can change those however you want to best support your specific architectural strategy. Make sure to change the parameter mapping in the testbench also, which is the only change that is allowed for you submission.
