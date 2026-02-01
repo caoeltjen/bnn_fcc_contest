@@ -9,4 +9,10 @@ module neuron #(
     output logic [OUTPUT_DATA_WIDTH-1:0] output_data
 );
 
+always_comb begin
+    
+
+end
+
+
 endmodule
