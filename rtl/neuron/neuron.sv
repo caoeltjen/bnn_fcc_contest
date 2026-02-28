@@ -1,10 +1,10 @@
 module neuron #(
-    parameter int PW = 8,
-    parameter int THRESH_W = 16
+    parameter int PW = 16, // bits per beat
+    parameter int N_IN_BITS = 784 // total bits accumulated per neuron (layer dependent)
 ) (
     input logic [PW-1:0]         x,
     input logic [PW-1:0]         w,
-    input logic [THRESH_W-1:0]   threshold, // has threshold
+    input logic [$clog2(N_IN_BITS+1)-1:0]   threshold, // has threshold
     
     input logic                  clk,
     input logic                  rst,
@@ -13,10 +13,10 @@ module neuron #(
 
     output logic                 valid_out,
     output logic                 y,
-    output logic [THRESH_W-1:0]  popcount_out
+    output logic [$clog2(N_IN_BITS+1)-1:0]  popcount_out
 );
 
-logic [THRESH_W-1:0] popcount; // luh accumulator
+logic [$clog2(N_IN_BITS+1)-1:0] popcount; // luh accumulator
 
 logic [PW-1:0] xnored; // xnored bits
 logic [$clog2(PW+1)-1:0] pc; // popcount of each beat

@@ -1,6 +1,7 @@
-module neuron #(
+module output_neuron #(
     parameter int PW = 8,
-    parameter int THRESH_W = 16
+    parameter int N_IN_BITS = 784,       // total bits accumulated per neuron (layer dependent)
+    localparam int THRESH_W = $clog2(N_IN_BITS+1)
 ) (
     input logic [PW-1:0]         x,
     input logic [PW-1:0]         w,

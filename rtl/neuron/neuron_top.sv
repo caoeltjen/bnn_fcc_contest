@@ -2,19 +2,24 @@
 
 module neuron_top #(
     parameter int PW = 16,            // PW: width of input vector and weight elements
-    parameter int THRESH_W = 16      // THRESH_W: width of threshold / popcount output
+    parameter int N_IN_BITS = 784,       // total bits accumulated per neuron (layer dependent)
+    localparam int THRESH_W = $clog2(N_IN_BITS+1)
 ) (
     input logic                 clk, // system clock
     input logic                 rst, // synchronous reset (active high)
 
+    input logic [PW-1:0]        x_in,           // input activation vector (not directly used, loaded via BRAM)
+
     // Inputs for threshold and weight ram writing
     input logic                 cfg_w_enw,      // write enable for weight BRAM (port A)
     input logic [PW-1:0]        cfg_w_dataw,    // data to write into weight BRAM
-    input logic [PW-1:0]        cfg_w_addrw,    // write address for weight BRAM
+    input logic [5:0]           cfg_w_addrw,    // write address for weight BRAM
 
     input logic                 cfg_w_ent,      // write enable for threshold BRAM (port A)
     input logic [THRESH_W-1:0]  cfg_w_datat,    // data to write into threshold BRAM
-    input logic [THRESH_W-1:0]  cfg_w_addrt,    // write address for threshold BRAM
+    input logic [5:0]           cfg_w_addrt,    // write address for threshold BRAM
+
+    input logic                 cfg_done,
 
     // Outputs of neuron processor
     output logic                valid_out,      // asserted when neuron output is valid
@@ -26,12 +31,12 @@ module neuron_top #(
     logic [PW-1:0]         x;          // input activation vector presented to neuron
     logic [PW-1:0]         w;          // weight vector read from BRAM (port B)
     logic [THRESH_W-1:0]   threshold;  // threshold value read from BRAM (port B)
-    logic                  valid_in_r; // registered valid indicating input data is ready
-    logic                  last_r;     // registered 'last' flag marking end of a read burst
+    logic                  valid_in;   // valid signal indicating input is ready
+    logic                  last;     // registered 'last' flag marking end of a read burst
 
     // Next-state signals for sequential update
-    logic                  next_valid_in;
     logic                  next_last;
+    logic                  last1, last2; // two cycle delay for the last signal too
 
     // Counters tracking how many words were written into BRAMs (used to know read length)
     logic [5:0] write_count_w_r;
@@ -51,6 +56,8 @@ module neuron_top #(
     logic next_reading_weights;
     logic next_reading_thresholds;
 
+    logic encycle1, encycle2;
+
     // Small state machine to coordinate write and read phases
     typedef enum logic [1:0] {
         IDLE,
@@ -60,19 +67,25 @@ module neuron_top #(
 
     state_t state_r, next_state;
 
+    assign x = x_in;
+
+    assign valid_in = encycle2; // once data is actually being outputted by the BRAM
+
+    assign last = last2;
+    
     // Instantiate the neuron processing block. It consumes x, w, threshold and
     // produces valid_out, y and popcount_out. Comments clarify interface mapping.
     neuron #(
         .PW(PW),
-        .THRESH_W(THRESH_W)
+        .N_IN_BITS(N_IN_BITS)
     ) neuron_inst (
         .x(x),                 // input activations (from BRAM read path)
         .w(w),                 // weights (from BRAM read path)
         .threshold(threshold), // threshold for activation decision
         .clk(clk),
         .rst(rst),
-        .valid_in(valid_in_r), // indicates x/w/threshold are valid this cycle
-        .last(last_r),         // indicates last element in a sequence
+        .valid_in(valid_in), // indicates x/w/threshold are valid this cycle
+        .last(last),         // indicates last element in a sequence
         .valid_out(valid_out),
         .y(y),
         .popcount_out(popcount_out)
@@ -85,8 +98,8 @@ module neuron_top #(
         .clka(clk),
         .ena(cfg_w_enw),                  // enable for write port A
         .wea(cfg_w_enw),                  // write enable tied to ena
-        .addra(cfg_w_addrw[5:0]),         // write address (lower bits used)
-        .dina(cfg_w_dataw[15:0]),         // data in for write port
+        .addra(cfg_w_addrw),         // write address (lower bits used)
+        .dina(cfg_w_dataw),         // data in for write port
         .clkb(clk),
         .enb(reading_weights_r),          // enable for read port B while in READING
         .web(1'b0),                       // read-only on port B
@@ -99,7 +112,7 @@ module neuron_top #(
         .clka(clk),
         .ena(cfg_w_ent),
         .wea(cfg_w_ent),
-        .addra(cfg_w_addrt[5:0]),
+        .addra(cfg_w_addrt),
         .dina(cfg_w_datat),
         .clkb(clk),
         .enb(reading_thresholds_r),
@@ -118,8 +131,10 @@ module neuron_top #(
             addr_threshold_read_r <= '0;
             reading_weights_r     <= 1'b0;    // not reading after reset
             reading_thresholds_r  <= 1'b0;
-            valid_in_r            <= 1'b0;    // no valid data yet
-            last_r                <= 1'b0;    // not last element
+            last2                 <= 1'b0;    // not last element
+            encycle1              <= 1'b0;
+            encycle2              <= 1'b0;
+            last1                 <= 1'b0;
             state_r               <= WRITING; // enter WRITING so configuration writes possible
         end
         else begin
@@ -130,9 +145,11 @@ module neuron_top #(
             addr_threshold_read_r <= next_addr_threshold_read;
             reading_weights_r     <= next_reading_weights;
             reading_thresholds_r  <= next_reading_thresholds;
-            valid_in_r            <= next_valid_in;
-            last_r                <= next_last;
+            last1                 <= next_last;
+            last2                 <= last1;
             state_r               <= next_state;
+            encycle1              <= reading_weights_r;
+            encycle2              <= encycle1;
         end   
     end
 
@@ -146,7 +163,6 @@ module neuron_top #(
         next_addr_threshold_read = addr_threshold_read_r;
         next_reading_weights = reading_weights_r;
         next_reading_thresholds = reading_thresholds_r;
-        next_valid_in = 1'b0; // default: no new valid input
         next_last = 1'b0;     // default: not last
 
         case(state_r)
@@ -155,12 +171,13 @@ module neuron_top #(
                 if(cfg_w_enw || cfg_w_ent) next_state = WRITING;
             end
             WRITING: begin
-                // while cfg write enables asserted, increment respective write counters
-                if(cfg_w_enw) next_write_count_w = write_count_w_r + 1;
-                if(cfg_w_ent) next_write_count_t = write_count_t_r + 1;
-                // when writes stop but we have written data, move to READING to load BRAM into neuron
-                if (!cfg_w_enw && !cfg_w_ent && (next_write_count_w != 0 || next_write_count_t != 0))
+                if (cfg_done)
                     next_state = READING;
+                else begin
+                    // while cfg write enables asserted, increment respective write counters
+                    if(cfg_w_enw) next_write_count_w = write_count_w_r + 1;
+                    if(cfg_w_ent) next_write_count_t = write_count_t_r + 1;
+                end
             end
             READING: begin
                 // start reading sequence: enable BRAM read ports and set addresses to zero
@@ -169,13 +186,9 @@ module neuron_top #(
                     next_reading_thresholds  = 1'b1;
                     next_addr_weight_read    = 6'd0;
                     next_addr_threshold_read = 6'd0;
-                    next_valid_in = 1'b0; // data will be valid next cycle after BRAM outputs stabilize
                     next_last = 1'b0;
                 end
                 else begin
-                    // while reading, assert valid_in when weights are being read (drives neuron valid_in)
-                    next_valid_in = reading_weights_r;
-
                     // detect when we've reached the last element based on the write_count_w_r
                     if(write_count_w_r != 0 && addr_weight_read_r == (write_count_w_r - 1)) begin
                         next_last = 1'b1; // mark last element of the burst
