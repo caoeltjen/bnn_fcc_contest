@@ -16,6 +16,7 @@ module neuron #(
 );
 
     logic acc_en;
+    logic acc_clr;
 
     neuron_struct #(
         .PW(PW)
@@ -26,6 +27,7 @@ module neuron #(
         .clk(clk),
         .rst(rst),
         .acc_en(acc_en),
+        .acc_clr(acc_clr),
         .last(last),
         .y(y),
         .popcount(popcount)
@@ -39,7 +41,8 @@ module neuron #(
         .clk(clk),
         .rst(rst),
         .valid_out(valid_out),
-        .acc_en(acc_en)
+        .acc_en(acc_en),
+        .acc_clr(acc_clr)
     );
 
 endmodule

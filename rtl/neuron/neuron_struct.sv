@@ -8,7 +8,7 @@ module neuron_struct #(
     input logic                  clk,
     input logic                  rst,
     input logic                  acc_en,
-    input logic                  last,
+    input logic                  acc_clr,
 
     output logic                 y,
     output logic [PW-1:0]        popcount
@@ -17,9 +17,23 @@ module neuron_struct #(
     logic [PW-1:0] popcount_r;
     logic [PW-1:0] accumulator_r;
     logic [PW-1:0] threshold_r;
+    logic [PW-1:0] xnor_vals;
 
-    assign popcount = popcount_r;
-    assign y = (popcount >= threshold_r) ? 1'b1 : 1'b0;
+    assign popcount = accumulator_r;
+    assign y = (accumulator_r >= threshold_r) ? 1'b1 : 1'b0;
+    assign xnor_vals = ~(x ^ w);
+
+    function automatic logic [PW-1:0] popcount_fn(
+        input logic [PW-1:0] v
+    );
+        int i;
+        begin
+            popcount_fn = '0;
+            for (i = 0; i < PW; i++) begin
+                popcount_fn = popcount_fn + v[i];
+            end
+        end
+    endfunction
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -28,8 +42,11 @@ module neuron_struct #(
             threshold_r <= '0;
         end
         else begin
+            if(acc_clr) begin
+                accumulator_r <= '0;
+            end
             if(acc_en) begin
-                popcount_r <= ~(x ^ w);
+                popcount_r <= popcount_fn(xnor_vals);
                 accumulator_r <= accumulator_r + popcount_r;
                 threshold_r <= threshold;
             end
