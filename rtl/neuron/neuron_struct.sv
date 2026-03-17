@@ -31,7 +31,6 @@ module neuron_struct #(
             popcount_fn = '0;
             for (i = 0; i < PW; i++) begin
                 if(v[i]) popcount_fn++;
-                //popcount_fn = popcount_fn + v[i];
             end
         end
     endfunction
@@ -46,7 +45,7 @@ module neuron_struct #(
             if(acc_clr) begin
                 accumulator_r <= '0;
             end
-            if(acc_en) begin
+            else if(acc_en) begin
                 popcount_r <= popcount_fn(xnor_vals);
                 accumulator_r <= accumulator_r + popcount_r;
                 threshold_r <= threshold;

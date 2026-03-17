@@ -47,7 +47,7 @@ module neuron_tb_depth #(
         rand int unsigned num_beats;
         rand bit [PW-1:0] x_beats[];
         rand bit [PW-1:0] w_beats[];
-        rand bit [PW-1:0] threshold;
+        rand bit [6:0] threshold;
 
         constraint c_num_beats {
             num_beats inside {[1:5]};
@@ -78,7 +78,7 @@ module neuron_tb_depth #(
     function automatic model_out_t model(
         input bit [PW-1:0] x_beats[],
         input bit [PW-1:0] w_beats[],
-        input logic [PW-1:0] threshold
+        input logic [6:0] threshold
     );
         model_out_t result;
         int i, j;
