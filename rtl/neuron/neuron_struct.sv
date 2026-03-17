@@ -14,7 +14,6 @@ module neuron_struct #(
     output logic [PW-1:0]        popcount
 );
 
-    logic [PW-1:0] popcount_r;
     logic [PW-1:0] accumulator_r;
     logic [PW-1:0] threshold_r;
     logic [PW-1:0] xnor_vals;
