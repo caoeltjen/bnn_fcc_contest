@@ -49,7 +49,6 @@ module neuron_struct #(
             out_threshold_r<= '0;
         end
         else begin
-
             if(acc_clr) begin
                 out_popcount_r  <= accum_next;
                 out_threshold_r <= threshold_r;
