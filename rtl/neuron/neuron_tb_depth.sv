@@ -209,10 +209,10 @@ module neuron_tb_depth #(
                 passed++;
             end
             else begin
-                $display("FAIL time=%0t threshold=%0d actual(popcount=%0d y=%0b) expected(popcount=%0d y=%0b)",
+                $display("FAIL time=%0t threshold=%0d actual(popcount=%0d y=%0b) expected(popcount=%0d y=%0b) num_beats=%0d",
                          $time, in_txn.threshold,
                          actual.popcount, actual.y,
-                         expected.popcount, expected.y);
+                         expected.popcount, expected.y, in_txn.num_beats);
                 failed++;
             end
         end
