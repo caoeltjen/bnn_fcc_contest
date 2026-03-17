@@ -18,7 +18,9 @@ module neuron_struct #(
     logic [PW-1:0] accumulator_r;
     logic [PW-1:0] threshold_r;
     logic [PW-1:0] xnor_vals;
+    logic [PW-1:0] beat_count;
 
+    assign beat_count = popcount_fn(xnor_vals);
     assign popcount = accumulator_r;
     assign y = (accumulator_r >= threshold_r) ? 1'b1 : 1'b0;
     assign xnor_vals = ~(x ^ w);
@@ -43,13 +45,11 @@ module neuron_struct #(
         end
         else begin
             if(acc_clr) begin
-                popcount_r <= popcount_fn(xnor_vals);
                 accumulator_r <= '0;
-                threshold_r <= threshold;
             end
             else if(acc_en) begin
-                popcount_r <= popcount_fn(xnor_vals);
-                accumulator_r <= accumulator_r + popcount_r;
+                popcount_r <= beat_count;
+                accumulator_r <= accumulator_r + beat_count;
                 threshold_r <= threshold;
             end
         end
