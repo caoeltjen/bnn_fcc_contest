@@ -23,6 +23,9 @@ module neuron_top_cont # (
             w_read_addr <= '0;
         end
         else begin
+            thres_read_en <= 1'b0;
+            w_read_en     <= 1'b0;
+            
             if(valid_in) begin
                 thres_read_en <= 1'b1;
                 w_read_en <= 1'b1;

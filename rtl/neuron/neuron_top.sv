@@ -1,5 +1,5 @@
 module neuron_top #(
-    parameter int PW = 8
+    parameter int PW = 16
 )(
     input logic           clk,
     input logic           rst,
