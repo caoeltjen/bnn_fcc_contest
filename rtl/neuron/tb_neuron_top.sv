@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module tb_neuron_top #(
     parameter int PW = 16,
     parameter NUM_TESTS = 1000,
