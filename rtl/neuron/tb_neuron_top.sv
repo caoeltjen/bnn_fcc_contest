@@ -95,8 +95,8 @@ module tb_neuron_top #(
     endfunction
 
     initial begin : load_mem_files
-        $readmemh("weight_bram.mem", weight_mem);
-        $readmemh("threshold_bram.mem", threshold_mem);
+        $readmemb("weight_bram.mif", weight_mem);
+        $readmemb("threshold_bram.mif", threshold_mem);
     end
 
     initial begin : generate_clock
