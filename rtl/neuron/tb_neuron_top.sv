@@ -21,8 +21,8 @@ module tb_neuron_top #(
 
     int passed, failed;
 
-    logic [PW-1:0] weight_mem    [0:63];
-    logic [PW-1:0] threshold_mem [0:63];
+    logic [PW-1:0] weight_mem    [0:1023];
+    logic [PW-1:0] threshold_mem [0:1023];
 
     neuron_top #(
         .PW(PW)
@@ -163,12 +163,12 @@ module tb_neuron_top #(
             @(posedge clk iff (!rst && valid_in));
 
             x_q.push_back(x);
-            w_q.push_back(weight_mem[w_ptr % 64]);
+            w_q.push_back(weight_mem[w_ptr % 1024]);
             
             w_ptr++;
 
             if (last) begin
-                txn = '{x_beats:x_q, w_beats:w_q, threshold: threshold_mem[t_ptr % 64]};
+                txn = '{x_beats:x_q, w_beats:w_q, threshold: threshold_mem[t_ptr % 1024]};
                 scoreboard_input_mailbox.put(txn);
                 t_ptr++;
                 x_q = {};
