@@ -79,25 +79,25 @@ module tb_layer_bank #(
 
             //Weight Loading
             for(int unsigned addr = 0; addr < depth; addr++) begin
-                logic [PW-1:0] data = $urandom;
+                logic [PW-1:0] w_data = $urandom;
                 cfg_we <= 1'b1;
                 cfg_is_weight <= 1'b1;
                 cfg_np_sel <= neuron;
                 cfg_addr <= addr;
-                cfg_data <= data;
-                w_bram_data[neuron][addr] = data;
+                cfg_data <= w_data;
+                w_bram_data[neuron][addr] = w_data;
                 @(posedge clk);
             end
 
             //Threshold Loading
             for(int unsigned addr = 0; addr < depth; addr++) begin
-                logic [PW-1:0] data = $urandom_range(0, 16'h00AA);;
+                logic [PW-1:0] t_data = $urandom_range(0, 16'h00AA);;
                 cfg_we <= 1'b1;
                 cfg_is_weight <= 1'b0;
                 cfg_np_sel <= neuron;
                 cfg_addr <= addr;
-                cfg_data <= data;
-                t_bram_data[neuron][addr] = data;
+                cfg_data <= t_data;
+                t_bram_data[neuron][addr] = t_data;
                 @(posedge clk);
             end
         end
