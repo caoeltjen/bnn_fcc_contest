@@ -7,6 +7,8 @@ module tb_layer_bank #(
     parameter NUM_TESTS = 1000
 );
 
+    localparam int DEPTH = (1 << ADDR_W);
+
     logic                   rst;
     logic                   clk = 1'b0;
 
@@ -26,6 +28,9 @@ module tb_layer_bank #(
     logic [PN-1:0]          valid_out;
 
     int passed, failed;
+
+    logic [PW-1:0] w_bram_data [0:PN-1][0:DEPTH-1];
+    logic [PW-1:0] t_bram_data [0:PN-1][0:DEPTH-1];
 
     layer_bank #(
         .PW(PW),
@@ -50,6 +55,55 @@ module tb_layer_bank #(
 
     initial begin : generate_clock
         forever #5 clk <= ~clk;
+    end
+
+    initial begin : initialization
+        $timeformat(-9, 0, " ns");
+
+        rst <= 1'b1;
+        x <= '0;
+        valid_in <= 1'b0;
+        last <= 1'b0;
+
+        repeat (5) @(posedge clk);
+        @(negedge clk);
+        rst <= 1'b0;
+    end
+
+    initial begin : load_bram_data
+        int unsigned depth = (1 << ADDR_W);
+
+        @(negedge rst);
+
+        for(int unsigned neuron = 0; neuron < PN; neuron++) begin
+
+            //Weight Loading
+            for(int unsigned addr = 0; addr < depth; addr++) begin
+                logic [PW-1:0] data = $urandom;
+                cfg_we <= 1'b1;
+                cfg_is_weight <= 1'b1;
+                cfg_np_sel <= neuron;
+                cfg_addr <= addr;
+                cfg_data <= data;
+                w_bram_data[neuron][addr] = data;
+                @(posedge clk);
+            end
+
+            //Threshold Loading
+            for(int unsigned addr = 0; addr < depth; addr++) begin
+                logic [PW-1:0] data = $urandom_range(0, 16'h00AA);;
+                cfg_we <= 1'b1;
+                cfg_is_weight <= 1'b0;
+                cfg_np_sel <= neuron;
+                cfg_addr <= addr;
+                cfg_data <= data;
+                t_bram_data[neuron][addr] = data;
+                @(posedge clk);
+            end
+        end
+
+        cfg_we <= 1'b0;
+        @(posedge clk);
     end
 
 endmodule
