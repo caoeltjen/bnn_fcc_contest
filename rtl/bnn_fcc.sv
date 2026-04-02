@@ -41,4 +41,56 @@ module bnn_fcc #(
         data_in_ready = 1'b1;
     end
 
+
+    // will read the header fields and store it
+    config_manager #(
+        .BUS_WIDTH(CONFIG_BUS_WIDTH),
+        .LAYERS(TOTAL_LAYERS-1),
+        .PARALLEL_INPUTS(PARALLEL_INPUTS),
+        .PARALLEL_NEURONS(PARALLEL_NEURONS)
+    ) config_manager_inst (
+        .clk(clk),
+        .rst(rst),
+        .config_data_in(config_data),
+        .config_valid(config_valid),
+        .config_keep(config_keep),
+        .config_last(config_last),
+        .config_ready(config_ready),
+
+        .reserved(reserved),
+        .total_bytes(total_bytes),
+        .bytes_per_neuron(bytes_per_neuron),
+        .num_neurons(num_neurons),
+        .layer_inputs(layer_inputs),
+        .layer_id(layer_id),
+        .msg_type()
+    );
+    
+    // will read the image data and push out the data to the neurons as it's being streamed in
+    // img_data_out: logic[INPUT_DATA_WIDTH/4-1:0] img_data_out[INPUT_BUS_WIDTH/4];
+    // aka 4 16-bit logics that hold 2 8-bit pixel values for a total of 8 image data streams
+    data_in #(
+        .INPUT_BUS_WIDTH(INPUT_BUS_WIDTH)
+    ) data_in_inst (
+        .clk(clk),
+        .rst(rst),
+        .data_in_valid(data_in_valid),
+        .data_in_ready(data_in_ready),
+        .data_in_data(data_in_data),
+        .data_in_keep(data_in_keep),
+        .data_in_last(data_in_last),
+
+        .reserved(reserved),
+        .total_bytes(total_bytes),
+        .bytes_per_neuron(bytes_per_neuron),
+        .num_neurons(num_neurons),
+        .layer_inputs(layer_inputs),
+        .layer_id(layer_id),
+        .msg_type(msg_type),
+
+        .img_data_out(img_data_out)
+    );
+
+
+    
 endmodule

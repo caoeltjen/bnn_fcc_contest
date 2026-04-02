@@ -19,8 +19,10 @@ module data_in #(
     input logic [7:0]  msg_type,
 
     // output the data
-    output logic [(INPUT_BUS_WIDTH/8)-1:0] img_data_out[INPUT_BUS_WIDTH/8]
+    output logic [(INPUT_BUS_WIDTH/4)-1:0] img_data_out[INPUT_BUS_WIDTH/4]
 );
+
+    
 
     
     // states to track status of data_in stream receiver
@@ -37,7 +39,7 @@ module data_in #(
     } data_in_t;
 
     typedef struct packed {
-        logic [(INPUT_BUS_WIDTH/8)-1:0] data; 
+        logic [(INPUT_BUS_WIDTH/4)-1:0] data; 
     } img_data_t;
     // size is runtime dependent, so we need to find a compile time constant.
     // we know that the config gives us a size, but that is going to be massive for big trees
@@ -45,7 +47,7 @@ module data_in #(
     // as this will save storage and allow us to have a compile time constant size
     // here, we're going to define  
     data_in_t img_data;
-    img_data_t img_data_out_arr[(INPUT_BUS_WIDTH/8)]; 
+    img_data_t img_data_out_arr[(INPUT_BUS_WIDTH/4)]; 
 
 
 
@@ -74,25 +76,25 @@ module data_in #(
                 if (data_in_valid && data_in_last) begin
                     next_state = IDLE;
                     img_data = '{data_in_data, data_in_keep};
-                    img_data_out_arr[0] = (img_data.keep[0]) ? img_data.data[7:0] : '0;
-                    img_data_out_arr[1] = (img_data.keep[1]) ? img_data.data[15:8] : '0;
-                    img_data_out_arr[2] = (img_data.keep[2]) ? img_data.data[23:16] : '0;
-                    img_data_out_arr[3] = (img_data.keep[3]) ? img_data.data[31:24] : '0;
-                    img_data_out_arr[4] = (img_data.keep[4]) ? img_data.data[39:32] : '0;
-                    img_data_out_arr[5] = (img_data.keep[5]) ? img_data.data[47:40] : '0;
-                    img_data_out_arr[6] = (img_data.keep[6]) ? img_data.data[55:48] : '0;
-                    img_data_out_arr[7] = (img_data.keep[7]) ? img_data.data[63:56] : '0;
+                    img_data_out_arr[0][7:0] = (img_data.keep[0]) ? img_data.data[7:0] : '0;
+                    img_data_out_arr[0][15:8] = (img_data.keep[1]) ? img_data.data[15:8] : '0;
+                    img_data_out_arr[1][7:0] = (img_data.keep[2]) ? img_data.data[23:16] : '0;
+                    img_data_out_arr[1][15:8] = (img_data.keep[3]) ? img_data.data[31:24] : '0;
+                    img_data_out_arr[2][7:0] = (img_data.keep[4]) ? img_data.data[39:32] : '0;
+                    img_data_out_arr[2][15:8] = (img_data.keep[5]) ? img_data.data[47:40] : '0;
+                    img_data_out_arr[3][7:0] = (img_data.keep[6]) ? img_data.data[55:48] : '0;
+                    img_data_out_arr[3][15:8] = (img_data.keep[7]) ? img_data.data[63:56] : '0;
                 end else if (data_in_valid && !data_in_last) begin
                     next_state = RECEIVING;
                     img_data = '{data_in_data, data_in_keep};
-                    img_data_out_arr[0] = (img_data.keep[0]) ? img_data.data[7:0] : '0;
-                    img_data_out_arr[1] = (img_data.keep[1]) ? img_data.data[15:8] : '0;
-                    img_data_out_arr[2] = (img_data.keep[2]) ? img_data.data[23:16] : '0;
-                    img_data_out_arr[3] = (img_data.keep[3]) ? img_data.data[31:24] : '0;
-                    img_data_out_arr[4] = (img_data.keep[4]) ? img_data.data[39:32] : '0;
-                    img_data_out_arr[5] = (img_data.keep[5]) ? img_data.data[47:40] : '0;
-                    img_data_out_arr[6] = (img_data.keep[6]) ? img_data.data[55:48] : '0;
-                    img_data_out_arr[7] = (img_data.keep[7]) ? img_data.data[63:56] : '0;
+                    img_data_out_arr[0][7:0] = (img_data.keep[0]) ? img_data.data[7:0] : '0;
+                    img_data_out_arr[0][15:8] = (img_data.keep[1]) ? img_data.data[15:8] : '0;
+                    img_data_out_arr[1][7:0] = (img_data.keep[2]) ? img_data.data[23:16] : '0;
+                    img_data_out_arr[1][15:8] = (img_data.keep[3]) ? img_data.data[31:24] : '0;
+                    img_data_out_arr[2][7:0] = (img_data.keep[4]) ? img_data.data[39:32] : '0;
+                    img_data_out_arr[2][15:8] = (img_data.keep[5]) ? img_data.data[47:40] : '0;
+                    img_data_out_arr[3][7:0] = (img_data.keep[6]) ? img_data.data[55:48] : '0;
+                    img_data_out_arr[3][15:8] = (img_data.keep[7]) ? img_data.data[63:56] : '0;
                 end else begin
                     next_state = RECEIVING;
                     img_data = '0;
@@ -103,10 +105,4 @@ module data_in #(
             end
         endcase
     end
-
-
-    always_comb begin : processing_data
-        
-    end
-
 endmodule

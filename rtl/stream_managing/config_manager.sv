@@ -1,8 +1,5 @@
 module config_manager #(
-    parameter int BUS_WIDTH       = 64, // bus stores 8 bytes
-    parameter int LAYERS           = 3, // 3 layers in the bnn
-    parameter int PARALLEL_INPUTS  = 8, // Pw and Pi
-    parameter int PARALLEL_NEURONS [LAYERS] = '{default: 8} // packs array with default value 8
+    parameter int BUS_WIDTH       = 64 // bus stores 8 bytes
 ) (
     input logic                          clk,
     input logic                          rst,
@@ -11,13 +8,16 @@ module config_manager #(
     input logic [(BUS_WIDTH/8)-1:0]      config_keep,
     input logic                          config_last,
     output logic                         config_ready,
-    output logic [BUS_WIDTH-1:0]         weight_wr_data,
-    output logic [LAYERS-1:0]            weight_wr_en,
-    output logic [BUS_WIDTH-1:0]         threshold_wr_data,
-    output logic [LAYERS-1:0]            threshold_wr_en
+    output logic [31:0]                 reserved,
+    output logic [31:0]                 total_bytes,
+    output logic [15:0]                 bytes_per_neuron,
+    output logic [15:0]                 num_neurons,
+    output logic [15:0]                 layer_inputs,
+    output logic [7:0]                  layer_id,
+    output logic [7:0]                  msg_type
 );
-    
 
+    
     /*
     Config manager follows a network-style communcation protocol. 
     Config header = 128 bits
@@ -47,15 +47,25 @@ module config_manager #(
     } weight_t;
 
     typedef enum {
-        HEADER,
-        PAYLOAD
+        IDLE,
+        HEADER
     } state_t;
     state_t curr_state, next_state;
+
+    // output header fields
+    assign config_ready = (curr_state == IDLE);
+    assign reserved = header.reserved;
+    assign total_bytes = header.total_bytes;
+    assign bytes_per_neuron = header.bytes_per_neuron;
+    assign num_neurons = header.num_neurons;
+    assign layer_inputs = header.layer_inputs;
+    assign layer_id = header.layer_id;
+    assign msg_type = header.msg_type;
+
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             curr_state <= HEADER;
-            header <= '0; // clears header
         end else begin
             curr_state <= next_state;
         end
@@ -63,6 +73,13 @@ module config_manager #(
 
     always_comb begin
         case (curr_state)
+            IDLE: begin
+                if (config_valid) begin
+                    next_state = HEADER;
+                end else begin
+                    next_state = IDLE;
+                end
+            end
             HEADER: begin
                 if (config_valid && !config_last) begin
                     header.msg_type = (config_keep[0]) ? config_data_in[7:0] : '0;
@@ -83,14 +100,10 @@ module config_manager #(
                     header.reserved[15:8] = (config_keep[5]) ? config_data_in[47:40] : '0;
                     header.reserved[23:16] = (config_keep[6]) ? config_data_in[55:48] : '0; 
                     header.reserved[31:24] = (config_keep[7]) ? config_data_in[63:56] : '0;
-                    next_state = PAYLOAD;
+                    next_state = IDLE;
                 end else begin
                     next_state = HEADER;
                 end
-            end
-
-            PAYLOAD: begin
-                
             end
         endcase
     end
