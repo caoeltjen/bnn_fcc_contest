@@ -6,9 +6,9 @@ module config_manager #(
 ) (
     input logic                          clk,
     input logic                          rst,
-    input logic [31:0]                   config_data_in,
+    input logic [BUS_WIDTH-1:0]          config_data_in,
     input logic                          config_valid,
-    input logic [(32/8)-1:0]             config_keep,
+    input logic [(BUS_WIDTH/8)-1:0]      config_keep,
     input logic                          config_last,
     output logic                         config_ready,
     output logic [BUS_WIDTH-1:0]         weight_wr_data,
@@ -45,14 +45,45 @@ module config_manager #(
     typedef enum {
         CONFIG1,
         CONFIG2,
-        CONFIG3,
-        CONFIG4,
         PAYLOAD
     } state_t;
     state_t curr_state, next_state;
 
     always_ff @(posedge clk or posedge rst) begin
-        
+        if (rst) begin
+            curr_state <= CONFIG1;
+            header <= '0; // clears header
+        end else begin
+            curr_state <= next_state;
+        end
+    end
+
+    always_comb begin
+        case (curr_state)
+            CONFIG1: begin
+                if (config_valid) begin
+                    header.msg_type = config_data_in[7:0];
+                    header.layer_id = config_data_in[15:8];
+                    header.layer_inputs = config_data_in[31:16];
+                    header.num_neurons = config_data_in[47:32];
+                    header.bytes_per_neuron = config_data_in[63:48];
+                    next_state = CONFIG2;
+                end else begin
+                    next_state = CONFIG1;
+                end
+            end
+
+            CONFIG2: begin
+                if (config_valid) begin
+                    header.total_bytes = config_data_in[31:0];
+                    header.reserved = config_data_in[63:32];
+                end
+            end 
+
+            PAYLOAD: begin
+                
+            end
+        endcase
     end
 
     // Store the config header at first few addresses in RAM component
