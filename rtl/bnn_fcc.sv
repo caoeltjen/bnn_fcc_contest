@@ -32,7 +32,7 @@ module bnn_fcc #(
     output logic                          data_out_valid,
     input  logic                          data_out_ready,
     output logic [  OUTPUT_BUS_WIDTH-1:0] data_out_data,
-    output logic [OUTPUT_BUS_WIDTH/8-1:0] data_out_keep,
+    output logic [OUTPUT_BUS_WIDTH/8-1:0] data_out_keep, // a single bit
     output logic                          data_out_last
 );
 
@@ -53,7 +53,7 @@ module bnn_fcc #(
         .config_keep(config_keep),
         .config_last(config_last),
         .config_ready(config_ready),
-
+        // outputs to send to the rest of the system
         .reserved(reserved),
         .total_bytes(total_bytes),
         .bytes_per_neuron(bytes_per_neuron),
@@ -62,13 +62,15 @@ module bnn_fcc #(
         .layer_id(layer_id),
         .msg_type(msg_type)
     );
+
     
     // will read the image data and push out the data to the neurons as it's being streamed in
-    // img_data_out: logic[INPUT_DATA_WIDTH/4-1:0] img_data_out[INPUT_BUS_WIDTH/4];
+    // @return ```logic[INPUT_DATA_WIDTH/4-1:0] img_data_out[INPUT_BUS_WIDTH/4];
     // aka 4 16-bit logics that hold 2 8-bit pixel values for a total of 8 image data streams
     data_in #(
         .INPUT_BUS_WIDTH(INPUT_BUS_WIDTH)
     ) data_in_inst (
+        // inputs
         .clk(clk),
         .rst(rst),
         .data_in_valid(data_in_valid),
@@ -76,15 +78,8 @@ module bnn_fcc #(
         .data_in_data(data_in_data),
         .data_in_keep(data_in_keep),
         .data_in_last(data_in_last),
-
-        .reserved(reserved),
-        .total_bytes(total_bytes),
-        .bytes_per_neuron(bytes_per_neuron),
-        .num_neurons(num_neurons),
-        .layer_inputs(layer_inputs),
-        .layer_id(layer_id),
-        .msg_type(msg_type),
-
+        
+        // output of image data. 
         .img_data_out(img_data_out)
     );
 

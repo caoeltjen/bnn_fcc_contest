@@ -9,15 +9,6 @@ module data_in #(
     input  logic [INPUT_BUS_WIDTH/8-1:0] data_in_keep,
     input  logic                         data_in_last,
 
-    // input the config header
-    input  logic [31:0] reserved,
-    input logic [31:0] total_bytes,
-    input logic [15:0] bytes_per_neuron,
-    input logic [15:0] num_neurons,
-    input logic [15:0] layer_inputs,
-    input logic [7:0]  layer_id,
-    input logic [7:0]  msg_type,
-
     // output the data
     output logic [(INPUT_BUS_WIDTH/4)-1:0] img_data_out[INPUT_BUS_WIDTH/4]
 );
