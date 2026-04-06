@@ -126,6 +126,12 @@ module tb_layer_bank #(
         valid_in <= 1'b0;
         last <= 1'b0;
 
+        cfg_we <= 1'b0;
+        cfg_is_weight <= 1'b0;
+        cfg_np_sel <= '0;
+        cfg_addr <= '0;
+        cfg_data <= '0;
+
         repeat (5) @(posedge clk);
         @(negedge clk);
         rst <= 1'b0;
@@ -193,16 +199,16 @@ module tb_layer_bank #(
             driver_mailbox.get(item);
 
             for (int i = 0; i < item.num_beats; i++) begin
-                @(negedge clk);
                 x <= item.x_beats[i];
                 valid_in <= 1'b1;
                 last <= (i == item.num_beats - 1);
+                @(posedge clk);
             end
 
-            @(negedge clk);
             x <= '0;
             last <= 1'b0;
             valid_in <= 1'b0;
+            @(posedge clk);
 
             repeat ($urandom_range(MIN_CYCLES_BETWEEN_TESTS - 1, MAX_CYCLES_BETWEEN_TESTS - 1)) @(posedge clk);
         end
