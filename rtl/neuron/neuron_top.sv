@@ -35,6 +35,7 @@ module neuron_top #(
     ) neuron_top_cont_inst (
         .clk(clk),
         .rst(rst),
+        .cfg_done(cfg_done),
         .thres_read_en(thres_read_en),
         .thres_read_addr(thres_read_addr),
         .w_read_en(w_read_en),
