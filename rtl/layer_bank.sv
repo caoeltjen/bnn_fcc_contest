@@ -27,6 +27,7 @@ module layer_bank #(
     logic [PN-1:0] cfg_t_we_np;
 
     genvar i;
+    
     always_comb begin
         cfg_w_we_np = '0;
         cfg_t_we_np = '0;

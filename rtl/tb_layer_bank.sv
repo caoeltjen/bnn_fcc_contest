@@ -14,6 +14,7 @@ module tb_layer_bank #(
     localparam int DEPTH = (1 << ADDR_W);
 
     logic                   rst;
+    logic                   ram_finished = 1'b0;
     logic                   clk = 1'b0;
 
     logic [PW-1:0]          x;
@@ -133,7 +134,7 @@ module tb_layer_bank #(
     initial begin : load_bram_data
         int unsigned depth = (1 << ADDR_W);
 
-        @(negedge rst);
+        @(posedge clk iff !rst);
 
         for(int unsigned neuron = 0; neuron < PN; neuron++) begin
 
@@ -165,6 +166,7 @@ module tb_layer_bank #(
         end
 
         cfg_we <= 1'b0;
+        ram_finished <= 1'b1;
         @(posedge clk);
     end
 
@@ -184,6 +186,8 @@ module tb_layer_bank #(
         neuron_item item;
 
         @(posedge clk iff !rst);
+
+        @(posedge ram_finished);  // Wait until BRAM loading is done
 
         forever begin
             driver_mailbox.get(item);
