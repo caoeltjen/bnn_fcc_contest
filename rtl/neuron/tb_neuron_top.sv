@@ -139,16 +139,16 @@ module tb_neuron_top #(
             driver_mailbox.get(item);
 
             for(int i = 0; i < item.num_beats; i++) begin
-                @(negedge clk);
                 x <= item.x_beats[i];
                 valid_in <= 1'b1;
                 last <= (i == item.num_beats - 1);
+                @(posedge clk);
             end
 
-            @(negedge clk);
             x <= '0;
             last <= 1'b0;
             valid_in <= 1'b0;
+            @(posedge clk);
 
             repeat ($urandom_range(MIN_CYCLES_BETWEEN_TESTS - 1, MAX_CYCLES_BETWEEN_TESTS - 1)) @(posedge clk);
         end
