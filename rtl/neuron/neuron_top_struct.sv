@@ -91,7 +91,7 @@ module neuron_top_struct #(
     // Ensured .mem files were included in the simulation directory for proper initialization
     weight_bram weight_bram_inst (
         .clka(clk),
-        .ena(cfg_w_we),
+        .ena(1'b1),
         .wea(cfg_w_we),
         .addra(cfg_w_addr),
         .dina(cfg_w_data),
@@ -107,7 +107,7 @@ module neuron_top_struct #(
 
     threshold_bram threshold_bram_inst (
         .clka(clk),
-        .ena(cfg_t_we),
+        .ena(1'b1),
         .wea(cfg_t_we),
         .addra(cfg_t_addr),
         .dina(cfg_t_data),
