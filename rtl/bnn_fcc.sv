@@ -36,52 +36,13 @@ module bnn_fcc #(
     output logic                          data_out_last
 );
 
-    always_comb begin
-        config_ready  = 1'b1;
-        data_in_ready = 1'b1;
-    end
+    typedef enum {
+        LOAD_MODEL,
+        RUN_INFERENCE
+    } operation_t;
 
-
-    // will read the header fields and store it
-    config_manager #(
-        .BUS_WIDTH(CONFIG_BUS_WIDTH)
-    ) config_manager_inst (
-        .clk(clk),
-        .rst(rst),
-        .config_data_in(config_data),
-        .config_valid(config_valid),
-        .config_keep(config_keep),
-        .config_last(config_last),
-        .config_ready(config_ready),
-        // outputs to send to the rest of the system
-        .reserved(reserved),
-        .total_bytes(total_bytes),
-        .bytes_per_neuron(bytes_per_neuron),
-        .num_neurons(num_neurons),
-        .layer_inputs(layer_inputs),
-        .layer_id(layer_id),
-        .msg_type(msg_type)
-    );
-
+    operation_t current_operation;
     
-    // will read the image data and push out the data to the neurons as it's being streamed in
-    // @return ```logic[INPUT_DATA_WIDTH/4-1:0] img_data_out[INPUT_BUS_WIDTH/4];
-    // aka 4 16-bit logics that hold 2 8-bit pixel values for a total of 8 image data streams
-    data_in #(
-        .INPUT_BUS_WIDTH(INPUT_BUS_WIDTH)
-    ) data_in_inst (
-        // inputs
-        .clk(clk),
-        .rst(rst),
-        .data_in_valid(data_in_valid),
-        .data_in_ready(data_in_ready),
-        .data_in_data(data_in_data),
-        .data_in_keep(data_in_keep),
-        .data_in_last(data_in_last),
-        
-        // output of image data. 
-        .img_data_out(img_data_out)
-    );
 
 
 
