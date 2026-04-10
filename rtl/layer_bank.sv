@@ -1,14 +1,14 @@
 module layer_bank #(
     parameter int PW = 16,
     parameter int PN = 4,
-    parameter int ADDR_W = 10
+    parameter int ADDR_W = 10,
+    parameter int INPUTS_PER_NEURON = 256
 )(
     input logic rst,
     input logic clk,
 
     input  logic [PW-1:0]          x,
     input  logic                   valid_in,
-    input  logic                   last,
 
     input  logic [PN-1:0]          np_active,
 
@@ -68,14 +68,14 @@ module layer_bank #(
     generate
         for (i = 0; i < PN; i++) begin : GEN_NP
             neuron_top #(
-                .PW(PW)
+                .PW(PW),
+                .INPUTS_PER_NEURON(INPUTS_PER_NEURON)
             ) u_neuron_top (
                 .clk        (clk),
                 .rst        (rst),
 
                 .x          (x),
                 .valid_in   (valid_in & np_active[i]),
-                .last       (last & np_active[i]),
 
                 .cfg_done   (cfg_done_np[i]),
                 .cfg_w_we   (cfg_w_we_np[i]),

@@ -4,12 +4,16 @@ module tb_layer_bank #(
     parameter int PW = 16,
     parameter int PN = 4,
     parameter int ADDR_W = 10,
+    parameter int INPUTS_PER_NEURON = 256,
     parameter NUM_TESTS = 1000,
     parameter int MIN_BEATS = 1,
     parameter int MAX_BEATS = 5,
     parameter int MIN_CYCLES_BETWEEN_TESTS = 1,
     parameter int MAX_CYCLES_BETWEEN_TESTS = 5
 );
+
+    localparam int NUM_BEATS_PER_NEURON = (INPUTS_PER_NEURON + PW - 1) / PW;
+    localparam int BEAT_CNT_W = (NUM_BEATS_PER_NEURON <= 1) ? 1 : $clog2(NUM_BEATS_PER_NEURON);
 
     localparam int DEPTH = (1 << ADDR_W);
 
@@ -19,7 +23,6 @@ module tb_layer_bank #(
 
     logic [PW-1:0]          x;
     logic                   valid_in;
-    logic                   last;
 
     logic                   cfg_we;
     logic                   cfg_is_weight;
@@ -44,13 +47,13 @@ module tb_layer_bank #(
     layer_bank #(
         .PW(PW),
         .PN(PN),
-        .ADDR_W(ADDR_W)
+        .ADDR_W(ADDR_W),
+        .INPUTS_PER_NEURON(INPUTS_PER_NEURON)
     ) dut (
         .rst(rst),
         .clk(clk),
         .x(x),
         .valid_in(valid_in),
-        .last(last),
         .np_active(np_active),
         .cfg_we(cfg_we),
         .cfg_is_weight(cfg_is_weight),
@@ -63,16 +66,7 @@ module tb_layer_bank #(
     );
 
     class neuron_item;
-        rand int unsigned num_beats;
-        rand bit [PW-1:0] x_beats[];
-
-        constraint c_num_beats {
-            num_beats inside {[MIN_BEATS:MAX_BEATS]};
-        }
-
-        constraint c_sizes {
-            x_beats.size() == num_beats;
-        }
+        rand bit [PW-1:0] x_beats[NUM_BEATS_PER_NEURON];
     endclass
 
     typedef struct packed {
@@ -102,7 +96,7 @@ module tb_layer_bank #(
             result.popcount = '0;
             result.y        = 1'b0;
 
-            for (i = 0; i < x_beats.size(); i++) begin
+            for (i = 0; i < NUM_BEATS_PER_NEURON; i++) begin
                 for (j = 0; j < PW; j++) begin
                     if (!(x_beats[i][j] ^ w_beats[i][j]))
                         result.popcount = result.popcount + 1;
@@ -124,7 +118,6 @@ module tb_layer_bank #(
         rst <= 1'b1;
         x <= '0;
         valid_in <= 1'b0;
-        last <= 1'b0;
 
         cfg_we <= 1'b0;
         cfg_is_weight <= 1'b0;
@@ -198,15 +191,13 @@ module tb_layer_bank #(
         forever begin
             driver_mailbox.get(item);
 
-            for (int i = 0; i < item.num_beats; i++) begin
+            for (int i = 0; i < NUM_BEATS_PER_NEURON; i++) begin
                 x <= item.x_beats[i];
                 valid_in <= 1'b1;
-                last <= (i == item.num_beats - 1);
                 @(posedge clk);
             end
 
             x <= '0;
-            last <= 1'b0;
             valid_in <= 1'b0;
             @(posedge clk);
 
@@ -222,6 +213,8 @@ module tb_layer_bank #(
         int unsigned w_ptr = 0;
         int unsigned t_ptr = 0;
 
+        int unsigned beat_count = 0;
+
         forever begin
             @(posedge clk iff (!rst && valid_in));
 
@@ -233,7 +226,9 @@ module tb_layer_bank #(
             end
             w_ptr++;
 
-            if (last) begin
+            beat_count++;
+
+            if (beat_count == NUM_BEATS_PER_NEURON) begin
                 for (int n = 0; n < PN; n++) begin
                     if (np_active[n]) begin
                         txn.w_beats[n] = w_q[n];
@@ -245,6 +240,7 @@ module tb_layer_bank #(
                 t_ptr++;
                 x_q = {};
                 for (int n = 0; n < PN; n++) w_q[n] = {};
+                beat_count = 0;
             end
         end
     end
