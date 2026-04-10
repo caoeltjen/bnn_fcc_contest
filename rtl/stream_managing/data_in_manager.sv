@@ -14,13 +14,23 @@ module data_in_manager#(
 
 
     // output the data
-    output logic [(INPUT_DATA_WIDTH*2)-1:0] img_data_out[INPUT_BUS_WIDTH/4], 
+    output logic [(INPUT_DATA_WIDTH*2)-1:0] img_data_out[INPUT_BUS_WIDTH/16], 
     // neurons accept 16 bits of data, so push out two pixels at a time, for 
     // the size of the bus, so 4 elements of  16 bits. 
     output logic [INPUT_BUS_WIDTH/16-1:0] img_data_out_valid, // /16 so it's 4 bits, one for each 16 bit chunk of the bus
     output logic                          img_data_out_last, // indicates the last bit of data being pushed out
     output logic                          img_data_out_error // if anything's wrong with the input stream, we want to be able to flag that to the neurons so they can handle it appropriately
 );
+
+    logic [(INPUT_DATA_WIDTH*2)-1:0] img_data_out_r[INPUT_BUS_WIDTH/16], img_data_out_next[INPUT_BUS_WIDTH/16];
+    logic [INPUT_BUS_WIDTH/16-1:0] img_data_out_valid_r, img_data_out_valid_next;
+    logic img_data_out_last_r, img_data_out_last_next;
+    logic img_data_out_error_r, img_data_out_error_next;
+
+    assign img_data_out = img_data_out_r;
+    assign img_data_out_valid = img_data_out_valid_r;
+    assign img_data_out_last = img_data_out_last_r;
+    assign img_data_out_error = img_data_out_error_r;
 
     // struct to hold two pixels of data. readable syntax
     typedef struct packed {
@@ -60,22 +70,61 @@ module data_in_manager#(
 
     always_comb begin
         next_state = curr_state;
+        shift_out_ready = 1'b0;
+        img_data_out_next = img_data_out_r;
+        img_data_out_valid_next = img_data_out_valid_r;
+        img_data_out_last_next = img_data_out_last_r;
+        img_data_out_error_next = img_data_out_error_r;
         case (curr_state)
             IDLE: begin
-                
+                next_state = IDLE;
+                if (shift_out_valid) begin
+                    shift_out_ready = 1'b1;
+                    // read first beat since it's valid, so we'll have the first 8 pixels
+                    for (int i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
+                        img_data_out_next[i] = shift_out_data[i*16 +: 16];
+                        img_data_out_valid_next[i] = shift_out_valid;
+                    end
+                    next_state = RECEIVING;
+                end
             end
             RECEIVING: begin
-                
+                if (shift_out_valid && !shift_out_last) begin
+                    shift_out_ready = 1'b1;
+                    for (int i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
+                        img_data_out_next[i] = shift_out_data[i*16 +: 16];
+                        img_data_out_valid_next[i] = shift_out_valid;
+                    end
+                    img_data_out_last_next = shift_out_last;
+                    next_state = RECEIVING;
+                end else if (shift_out_valid && shift_out_last) begin
+                    shift_out_ready = 1'b1;
+                    for (int i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
+                        img_data_out_next[i] = shift_out_data[i*16 +: 16];
+                        img_data_out_valid_next[i] = shift_out_valid;
+                    end
+                    img_data_out_last_next = shift_out_last;
+                    next_state = IDLE;
+                end else begin
+                    next_state = RECEIVING;
+                end
             end
         endcase
     end
 
-
     always_ff @(posedge clk) begin
         if (rst) begin
             curr_state <= IDLE;
+            img_data_out_r <= '{default:'0};
+            img_data_out_valid_r <= '0;
+            img_data_out_last_r <= 1'b0;
+            img_data_out_error_r <= 1'b0;
         end else begin
             curr_state <= next_state;
+            img_data_out_r <= img_data_out_next;
+            img_data_out_valid_r <= img_data_out_valid_next;
+            img_data_out_last_r <= img_data_out_last_next;
+            img_data_out_error_r <= img_data_out_error_next;
         end
     end
 

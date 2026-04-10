@@ -127,6 +127,7 @@ module config_manager #(
                 payload_bytes_received_next = '0;
                 error_next = 1'b0;
                 header_valid_next = 1'b0;
+                shift_out_ready = 1'b0;
 
                 if (shift_out_valid) begin
                     // read the first beat of the header, then move to next state where second header beat is defined
