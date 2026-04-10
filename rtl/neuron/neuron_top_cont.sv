@@ -23,9 +23,8 @@ module neuron_top_cont # (
 
     logic first_read_happened;
     logic [BEAT_CNT_W-1:0] beat_count;
-    logic last_r;
 
-    assign last = last_r;
+    assign last = beat_count == NUM_BEATS_PER_NEURON - 1 ? 1 : 0;
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -35,12 +34,10 @@ module neuron_top_cont # (
             w_read_addr <= '0;
             first_read_happened <= 1'b0;
             beat_count <= '0;
-            last_r <= 1'b0;
         end
         else begin
             thres_read_en <= 1'b0;
             w_read_en     <= 1'b0;
-            last_r <= 1'b0;
 
             if(!first_read_happened && cfg_done) begin
                 thres_read_en <= 1'b1;
@@ -56,7 +53,6 @@ module neuron_top_cont # (
                 if(beat_count == NUM_BEATS_PER_NEURON - 1) begin
                     thres_read_addr <= thres_read_addr + 1;
                     beat_count <= '0;
-                    last_r <= 1'b1;
                 end
             end
         end

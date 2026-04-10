@@ -4,7 +4,7 @@
 module tb_neuron_top #(
     parameter int PW = 16,
     parameter int ADDR_W = 10,
-    parameter int INPUTS_PER_NEURON = 784,
+    parameter int INPUTS_PER_NEURON = 256,
     parameter NUM_TESTS = 1000,
     parameter int MIN_CYCLES_BETWEEN_TESTS = 1,
     parameter int MAX_CYCLES_BETWEEN_TESTS = 5
