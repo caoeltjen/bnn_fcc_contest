@@ -183,6 +183,7 @@ module tb_layer_bank #(
 
     initial begin : driver
         neuron_item item;
+        int gap;
 
         @(posedge clk iff !rst);
 
@@ -197,11 +198,13 @@ module tb_layer_bank #(
                 @(posedge clk);
             end
 
-            x <= '0;
-            valid_in <= 1'b0;
-            @(posedge clk);
+            gap = $urandom_range(MIN_CYCLES_BETWEEN_TESTS-1, MAX_CYCLES_BETWEEN_TESTS);
 
-            repeat ($urandom_range(MIN_CYCLES_BETWEEN_TESTS - 1, MAX_CYCLES_BETWEEN_TESTS - 1)) @(posedge clk);
+            if (gap > 0) begin
+                x <= '0;
+                valid_in <= 1'b0;
+                repeat (gap) @(posedge clk);
+            end
         end
     end
 
