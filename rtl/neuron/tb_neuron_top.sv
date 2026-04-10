@@ -126,6 +126,7 @@ module tb_neuron_top #(
 
     initial begin : driver
         neuron_item item;
+        int gap;
 
         @(posedge clk iff !rst);
 
@@ -138,11 +139,13 @@ module tb_neuron_top #(
                 @(posedge clk);
             end
 
-            x <= '0;
-            valid_in <= 1'b0;
-            @(posedge clk);
-
-            repeat ($urandom_range(MIN_CYCLES_BETWEEN_TESTS - 1, MAX_CYCLES_BETWEEN_TESTS - 1)) @(posedge clk);
+            gap = $urandom_range(MIN_CYCLES_BETWEEN_TESTS-1, MAX_CYCLES_BETWEEN_TESTS);
+            
+            if (gap > 0) begin
+                x <= '0;
+                valid_in <= 1'b0;
+                repeat (gap) @(posedge clk);
+            end
         end
     end
 
