@@ -24,7 +24,7 @@ module neuron_top_cont # (
     logic first_read_happened;
     logic [BEAT_CNT_W-1:0] beat_count;
 
-    assign last = valid_in && (beat_count == NUM_BEATS_PER_NEURON - 1) ? 1 : 0;
+    assign last = beat_count == NUM_BEATS_PER_NEURON - 1 ? 1 : 0;
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
