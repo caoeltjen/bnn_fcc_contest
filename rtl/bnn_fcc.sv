@@ -286,13 +286,87 @@ module bnn_fcc #(
 // Seralize Layer 0 Output and Feed into Layer 1
 //------------------------------------------------------------------------------
 
-    
+    logic [PN0-1:0] l01_buf [PARALLEL_INPUTS / PN0 - 1:0]; // buffer for layer 0 outputs
+    logic l01_buf_full; // flag to see when buffer is full
+    logic [$clog2(PARALLEL_INPUTS / PN0)-1:0] l01_buf_idx; // index to keep track of where we are writing in the buffer
+
+    always_ff @(posedge clk or posedge rst) begin
+        if(rst) begin
+            l01_buf <= '{default: '0}; // reset everything
+            layer1_x <= '0;
+            layer1_valid_in <= 1'b0;
+            l01_buf_full <= 1'b0;
+            l01_buf_idx <= '0;
+        end
+        else begin
+            layer1_valid_in <= 1'b0;
+
+            if(l01_buf_full) begin // if the buffer is full
+                // hardcoded version
+                // layer1_x <= {l01_buf[1], l01_buf[0]}; // send the packed 16 bit data to the next layer
+
+                // Generic version -- Assumes Parallel Inputs is divisible by your layer size (PN)
+                for (int i = 0; i < PARALLEL_INPUTS / PN0; i++) begin
+                    layer1_x[i*PN0 +: PN0] <= l01_buf[i];
+                end
+
+                layer1_valid_in <= 1'b1; // set valid signal
+                l01_buf_full <= 1'b0; // set full to 0
+            end
+            else if(&l0_valid_out) begin // if the buffer isnt full and the outputs on the previous layer are valid
+                l01_buf[l01_buf_idx] <= l0_y; // write outputs to the buffer
+                l01_buf_idx <= l01_buf_idx + 1; // incremenet index
+
+                if(l01_buf_idx == (PARALLEL_INPUTS / PN0) - 1) begin // if we are at the end of the buffer
+                    l01_buf_full <= 1'b1; // set full to 1
+                    l01_buf_idx <= '0; // reset index
+                end
+            end
+        end
+    end
 
 //------------------------------------------------------------------------------
 // Seralize Layer 1 Output and Feed into Layer 2
 //------------------------------------------------------------------------------
 
+    logic [PN1-1:0] l12_buf [PARALLEL_INPUTS / PN1 - 1:0]; // buffer for layer 0 outputs
+    logic l12_buf_full; // flag to see when buffer is full
+    logic [$clog2(PARALLEL_INPUTS / PN1)-1:0] l12_buf_idx; // index to keep track of where we are writing in the buffer
 
+    always_ff @(posedge clk or posedge rst) begin
+        if(rst) begin
+            l12_buf <= '{default: '0}; // reset everything
+            layer2_x <= '0;
+            layer2_valid_in <= 1'b0;
+            l12_buf_full <= 1'b0;
+            l12_buf_idx <= '0;
+        end
+        else begin
+            layer2_valid_in <= 1'b0;
+
+            if(l12_buf_full) begin // if the buffer is full
+                // hardcoded version
+                // layer2_x <= {l12_buf[1], l12_buf[0]}; // send the packed 16 bit data to the next layer
+
+                // Generic version -- Assumes Parallel Inputs is divisible by your layer size (PN)
+                for (int i = 0; i < PARALLEL_INPUTS / PN1; i++) begin
+                    layer2_x[i*PN1 +: PN1] <= l12_buf[i];
+                end
+
+                layer2_valid_in <= 1'b1; // set valid signal
+                l12_buf_full <= 1'b0; // set full to 0
+            end
+            else if(&l1_valid_out) begin // if the buffer isnt full and the outputs on the previous layer are valid
+                l12_buf[l12_buf_idx] <= l1_y; // write outputs to the buffer
+                l12_buf_idx <= l12_buf_idx + 1; // incremenet index
+
+                if(l12_buf_idx == (PARALLEL_INPUTS / PN1) - 1) begin // if we are at the end of the buffer
+                    l12_buf_full <= 1'b1; // set full to 1
+                    l12_buf_idx <= '0; // reset index
+                end
+            end
+        end
+    end
 
 //------------------------------------------------------------------------------
 // Parse Config Manager and Write to BRAMS
