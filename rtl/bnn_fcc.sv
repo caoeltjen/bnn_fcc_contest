@@ -130,6 +130,9 @@ module bnn_fcc #(
     logic [PN0-1:0][PARALLEL_INPUTS-1:0] l0_popcount;
     logic [PN0-1:0] l0_valid_out;
 
+    logic [PARALLEL_INPUTS-1:0] layer0_x;
+    logic layer0_valid_in;
+
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN0),
@@ -168,6 +171,9 @@ module bnn_fcc #(
     logic [PN1-1:0] l1_y;
     logic [PN1-1:0][PARALLEL_INPUTS-1:0] l1_popcount;
     logic [PN1-1:0] l1_valid_out;
+
+    logic [PARALLEL_INPUTS-1:0] layer1_x;
+    logic layer1_valid_in;
 
     layer_bank #(
         .PW(PARALLEL_INPUTS),
@@ -208,6 +214,9 @@ module bnn_fcc #(
     logic [PN2-1:0][PARALLEL_INPUTS-1:0] l2_popcount;
     logic [PN2-1:0] l2_valid_out;
 
+    logic [PARALLEL_INPUTS-1:0] layer2_x;
+    logic layer2_valid_in;
+
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN2),
@@ -236,9 +245,6 @@ module bnn_fcc #(
 //------------------------------------------------------------------------------
 
     localparam int IMG_CHUNKS = INPUT_BUS_WIDTH / 16;
-
-    logic [PARALLEL_INPUTS-1:0] layer0_x;
-    logic layer0_valid_in;
 
     logic [PARALLEL_INPUTS-1:0] img_buffer [IMG_CHUNKS];
     logic [IMG_CHUNKS-1:0]      img_buf_valid;
@@ -280,15 +286,13 @@ module bnn_fcc #(
 // Seralize Layer 0 Output and Feed into Layer 1
 //------------------------------------------------------------------------------
 
-    logic [PARALLEL_INPUTS-1:0] layer1_x;
-    logic layer1_valid_in;
+    
 
 //------------------------------------------------------------------------------
 // Seralize Layer 1 Output and Feed into Layer 2
 //------------------------------------------------------------------------------
 
-    logic [PARALLEL_INPUTS-1:0] layer2_x;
-    logic layer2_valid_in;
+
 
 //------------------------------------------------------------------------------
 // Parse Config Manager and Write to BRAMS
