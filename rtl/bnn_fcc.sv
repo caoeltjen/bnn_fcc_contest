@@ -369,6 +369,75 @@ module bnn_fcc #(
     end
 
 //------------------------------------------------------------------------------
+// Capture Layer 2 Outputs
+//------------------------------------------------------------------------------
+
+    logic [PARALLEL_INPUTS-1:0] final_scores [TOPOLOGY[3]-1:0]; // buffer for layer 2 outputs
+    logic [$clog2(TOPOLOGY[3]+1)-1:0] final_scores_idx; // index to keep track of where we are writing in the buffer
+    logic final_scores_full; // flag to see when buffer is full
+
+    always_ff @(posedge clk or posedge rst) begin
+        if(rst) begin
+            final_scores_full <= 1'b0;
+            final_scores_idx <= '0;
+            final_scores <= '{default: '0};
+        end
+        else begin
+            int next_count;
+            next_count = final_scores_idx;
+
+            if(data_out_valid && data_out_ready) begin
+                final_scores_full <= 1'b0; // reset full flag to start filling buffer again
+                final_scores_idx <= '0; // reset index
+                final_scores <= '{default: '0}; // clear buffer
+            end
+
+            if(!final_scores_full) begin // if the final scores list is not full
+                for(int i = 0; i < PN2; i++) begin // increment through all the neuron processors
+                    if(l2_valid_out[i] && next_count < TOPOLOGY[3]) begin // if the output is valid and we have room in the buffer
+                        final_scores[next_count] <= l2_popcount[i]; // write outputs to the buffer
+                        next_count = next_count + 1; // increment count
+                    end
+                end
+
+                final_scores_idx <= next_count;
+
+                if(next_count >= TOPOLOGY[3]) begin // if we get to past the size of the buffer
+                    final_scores_full <= 1'b1; // set full to 1
+                end
+            end
+        end
+    end
+
+//------------------------------------------------------------------------------
+// Argmax
+//------------------------------------------------------------------------------
+
+    logic [PARALLEL_INPUTS-1:0] max_val;
+    logic [$clog2(TOPOLOGY[3])-1:0] max_idx;
+
+    assign data_out_valid = final_scores_full; // output is valid when we have all the final scores
+    assign data_out_data = max_idx; // output the index of the max value as the classification result
+    
+    // These two im not really sure about @lucas if you wanna look these over thatd be great
+    assign data_out_keep = '1;
+    assign data_out_last = 1'b1;
+
+    always_comb begin
+        max_val = final_scores[0]; // set initial max to the first value
+        max_idx = 0; // set initial index to 0
+
+        if(final_scores_full) begin
+            for(int i = 1; i < TOPOLOGY[3]; i++) begin // loop through all the final scores
+                if(final_scores[i] > max_val) begin // if the current score is greater than the max
+                    max_val = final_scores[i]; // update value and index
+                    max_idx = i;
+                end
+            end
+        end
+    end
+
+//------------------------------------------------------------------------------
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
