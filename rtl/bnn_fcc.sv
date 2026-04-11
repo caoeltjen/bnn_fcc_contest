@@ -294,51 +294,63 @@ module bnn_fcc #(
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
+    localparam int LAYER0 = 8'd1;
+    localparam int LAYER1 = 8'd2;
+    localparam int LAYER2 = 8'd3;
+
+    logic [7:0] active_layer_id;
+    logic       active_is_weight;
+    logic [ADDR_W-1:0] cfg_addr_count;
+    
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
-            
+            l0_cfg_we <= 1'b0;
+            l0_cfg_is_weight <= 1'b0;
+            l0_cfg_np_sel <= '0;
+            l0_cfg_addr <= '0;
+            l0_cfg_data <= '0;
+
+            l1_cfg_we <= 1'b0;
+            l1_cfg_is_weight <= 1'b0;
+            l1_cfg_np_sel <= '0;
+            l1_cfg_addr <= '0;
+            l1_cfg_data <= '0;
+
+            l2_cfg_we <= 1'b0;
+            l2_cfg_is_weight <= 1'b0;
+            l2_cfg_np_sel <= '0;
+            l2_cfg_addr <= '0;
+            l2_cfg_data <= '0;
         end
         else begin
             l0_cfg_we <= 1'b0; // set all write enables to 0 by default
             l1_cfg_we <= 1'b0;
             l2_cfg_we <= 1'b0;
 
-            if(cfg_header_out_valid) begin // check if the header is valid
-                if(cfg_header_out.layer_id == LAYER0) begin // identify layer by header
-                    if(cfg_header_out.msg_type == 0) begin // weights
-                        l0_cfg_we <= 1'b1;
-                        l0_cfg_is_weight <= 1'b1;
-                        
-                    end
-                    else if(cfg_header_out.msg_type == 1) begin // thresholds
-                        l0_cfg_we <= 1'b1;
-                        l0_cfg_is_weight <= 1'b0;
+            if(cfg_header_out_valid) begin
+                active_layer_id <= cfg_header_out.layer_id; // latch active layer
+                active_is_weight <= (cfg_header_out.msg_type == 0); // latch whether its weight or threshold
+                cfg_addr_count <= '0; // reset address count
+            end
 
-                    end
+            if(cfg_payload_valid[0] && cfg_payload_valid[1]) begin // make sure 16 bits ready to write
+                if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
+                    l0_cfg_we <= 1'b1;
+                    l0_cfg_is_weight <= active_is_weight;
+
+
                 end
-                else if(cfg_header_out.layer_id == LAYER1) begin
-                    if(cfg_header_out.msg_type == 0) begin
-                        l1_cfg_we <= 1'b1;
-                        l1_cfg_is_weight <= 1'b1;
+                if(active_layer_id == LAYER1) begin
+                    l1_cfg_we <= 1'b1;
+                    l1_cfg_is_weight <= active_is_weight;
 
-                    end
-                    else if(cfg_header_out.msg_type == 1) begin
-                        l1_cfg_we <= 1'b1;
-                        l1_cfg_is_weight <= 1'b0;
 
-                    end
                 end
-                else if(cfg_header_out.layer_id == LAYER2) begin
-                    if(cfg_header_out.msg_type == 0) begin
-                        l2_cfg_we <= 1'b1;
-                        l2_cfg_is_weight <= 1'b1;
+                if(active_layer_id == LAYER2) begin
+                    l2_cfg_we <= 1'b1;
+                    l2_cfg_is_weight <= active_is_weight;
 
-                    end
-                    else if(cfg_header_out.msg_type == 1) begin
-                        l2_cfg_we <= 1'b1;
-                        l2_cfg_is_weight <= 1'b0;
 
-                    end
                 end
             end
         end
