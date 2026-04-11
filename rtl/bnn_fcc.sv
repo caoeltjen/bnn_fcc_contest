@@ -301,10 +301,15 @@ module bnn_fcc #(
     logic [7:0] active_layer_id;
     logic       active_is_weight;
     logic [ADDR_W-1:0] cfg_addr_count;
+    logic [31:0] weight_iter; // can parameterize this if we want to just didnt feel like doing the math
 
     logic [$clog2(PN0)-1:0] l0_np_count;
     logic [$clog2(PN1)-1:0] l1_np_count;
     logic [$clog2(PN2)-1:0] l2_np_count;
+
+    logic [$clog2(TOPOLOGY[0] / PARALLEL_INPUTS)-1:0] l0_weight_counter;
+    logic [$clog2(TOPOLOGY[1] / PARALLEL_INPUTS)-1:0] l1_weight_counter;
+    logic [$clog2(TOPOLOGY[2] / PARALLEL_INPUTS)-1:0] l2_weight_counter;
     
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -333,6 +338,12 @@ module bnn_fcc #(
             l0_np_count <= '0;
             l1_np_count <= '0;
             l2_np_count <= '0;
+
+            l0_weight_counter <= '0;
+            l1_weight_counter <= '0;
+            l2_weight_counter <= '0;
+
+            weight_iter <= '0;
         end
         else begin
             l0_cfg_we <= 1'b0; // set all write enables to 0 by default
@@ -347,43 +358,114 @@ module bnn_fcc #(
                 l0_np_count <= '0; // reset neuron processor counters
                 l1_np_count <= '0;
                 l2_np_count <= '0;
+
+                l0_weight_counter <= '0;
+                l1_weight_counter <= '0;
+                l2_weight_counter <= '0;
+
+                weight_iter <= '0;
             end
 
+            // TODO: i need to pack these like actually. We need like a small buffer to put together 1,0 3,2 5,4 7,6 yktv
             if(cfg_payload_valid[0] && cfg_payload_valid[1]) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     l0_cfg_we <= 1'b1;
                     l0_cfg_is_weight <= active_is_weight;
                     l0_cfg_addr <= cfg_addr_count;
                     l0_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
-                    l0_np_sel <= l0_np_count;
+                    l0_cfg_np_sel <= l0_np_count;
+                    if(active_is_weight) begin // if we are writing weights
+                        l0_weight_counter <= l0_weight_counter + 1; // we increment the amount of weights we have written
+                        cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
 
-                    if(cfg_addr_count reaches some point then you need to swtich neuron processors you are writing to) begin
-                        l0_np_count <= l0_np_count + 1;
-                        cfg_addr_count <= '0;
+                        if(l0_weight_counter == TOPOLOGY[0] / PARALLEL_INPUTS - 1) begin ///for every neuron worth of weights we write
+                            l0_np_count <= l0_np_count + 1; // we move to the next neuron processor
+                            cfg_addr_count <= weight_iter * (TOPOLOGY[0] / PARALLEL_INPUTS); // we reset the address to start from 0 on the next neuron processor's bram
+                            l0_weight_counter <= '0; // we reset the weight counter as well
+
+                            if(l0_np_count == PN0 - 1) begin // if we are on the last neuron processor and writing the last weight
+                                l0_np_count <= '0; // next cycle put the select back to the first neuron
+                                weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
+                                cfg_addr_count <= (weight_iter + 1'b1) * (TOPOLOGY[0] / PARALLEL_INPUTS); // we move the address count to the next set of weights for the next iteration
+                            end
+                        end
+                    end
+
+                    else if(!active_is_weight) begin
+                        l0_np_count <= l0_np_count + 1; // increment the select signal
+
+                        if(l0_np_count == PN0 - 1) begin // if the select signal is at the last neuron
+                            l0_np_count <= '0; // next cycle put the select back to the first neuron
+                            cfg_addr_count <= cfg_addr_count + 1; // increment the address
+                        end
                     end
                 end
+
                 if(active_layer_id == LAYER1) begin
                     l1_cfg_we <= 1'b1;
                     l1_cfg_is_weight <= active_is_weight;
                     l1_cfg_addr <= cfg_addr_count;
                     l1_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
-                    l1_np_sel <= l1_np_count;
+                    l1_cfg_np_sel <= l1_np_count;
 
-                    if(cfg_addr_count reaches some point then you need to swtich neuron processors you are writing to) begin
-                        l1_np_count <= l1_np_count + 1;
-                        cfg_addr_count <= '0;
+                    if(active_is_weight) begin // if we are writing weights
+                        l1_weight_counter <= l1_weight_counter + 1; // we increment the amount of weights we have written
+                        cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
+
+                        if(l1_weight_counter == TOPOLOGY[1] / PARALLEL_INPUTS - 1) begin ///for every neuron worth of weights we write
+                            l1_np_count <= l1_np_count + 1; // we move to the next neuron processor
+                            cfg_addr_count <= weight_iter * (TOPOLOGY[1] / PARALLEL_INPUTS); // we reset the address to start from 0 on the next neuron processor's bram
+                            l1_weight_counter <= '0; // we reset the weight counter as well
+
+                            if(l1_np_count == PN1 - 1) begin // if we are on the last neuron processor and writing the last weight
+                                l1_np_count <= '0; // next cycle put the select back to the first neuron
+                                weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
+                                cfg_addr_count <= (weight_iter + 1'b1) * (TOPOLOGY[1] / PARALLEL_INPUTS); // we move the address count to the next set of weights for the next iteration
+                            end
+                        end
+                    end
+
+                    else if(!active_is_weight) begin
+                        l1_np_count <= l1_np_count + 1; // increment the select signal
+
+                        if(l1_np_count == PN1 - 1) begin // if the select signal is at the last neuron
+                            l1_np_count <= '0; // next cycle put the select back to the first neuron
+                            cfg_addr_count <= cfg_addr_count + 1; // increment the address
+                        end
                     end
                 end
+
                 if(active_layer_id == LAYER2) begin
                     l2_cfg_we <= 1'b1;
                     l2_cfg_is_weight <= active_is_weight;
                     l2_cfg_addr <= cfg_addr_count;
                     l2_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
-                    l2_np_sel <= l2_np_count;
+                    l2_cfg_np_sel <= l2_np_count;
 
-                    if(cfg_addr_count reaches some point then you need to swtich neuron processors you are writing to) begin
-                        l2_np_count <= l2_np_count + 1;
-                        cfg_addr_count <= '0;
+                    if(active_is_weight) begin // if we are writing weights
+                        l2_weight_counter <= l2_weight_counter + 1; // we increment the amount of weights we have written
+                        cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
+
+                        if(l2_weight_counter == TOPOLOGY[2] / PARALLEL_INPUTS - 1) begin ///for every neuron worth of weights we write
+                            l2_np_count <= l2_np_count + 1; // we move to the next neuron processor
+                            cfg_addr_count <= weight_iter * (TOPOLOGY[2] / PARALLEL_INPUTS); // we reset the address to start from 0 on the next neuron processor's bram
+                            l2_weight_counter <= '0; // we reset the weight counter as well
+
+                            if(l2_np_count == PN2 - 1) begin // if we are on the last neuron processor and writing the last weight
+                                l2_np_count <= '0; // next cycle put the select back to the first neuron
+                                weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
+                                cfg_addr_count <= (weight_iter + 1'b1) * (TOPOLOGY[2] / PARALLEL_INPUTS); // we move the address count to the next set of weights for the next iteration
+                            end
+                        end
+                    end
+
+                    else if(!active_is_weight) begin
+                        l2_np_count <= l2_np_count + 1; // increment the select signal
+
+                        if(l2_np_count == PN2 - 1) begin // if the select signal is at the last neuron
+                            l2_np_count <= '0; // next cycle put the select back to the first neuron
+                            cfg_addr_count <= cfg_addr_count + 1; // increment the address
+                        end
                     end
                 end
             end
