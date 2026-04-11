@@ -301,6 +301,10 @@ module bnn_fcc #(
     logic [7:0] active_layer_id;
     logic       active_is_weight;
     logic [ADDR_W-1:0] cfg_addr_count;
+
+    logic [$clog2(PN0)-1:0] l0_np_count;
+    logic [$clog2(PN1)-1:0] l1_np_count;
+    logic [$clog2(PN2)-1:0] l2_np_count;
     
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -321,6 +325,14 @@ module bnn_fcc #(
             l2_cfg_np_sel <= '0;
             l2_cfg_addr <= '0;
             l2_cfg_data <= '0;
+
+            active_layer_id <= '0;
+            active_is_weight <= 1'b0;
+            cfg_addr_count <= '0;
+
+            l0_np_count <= '0;
+            l1_np_count <= '0;
+            l2_np_count <= '0;
         end
         else begin
             l0_cfg_we <= 1'b0; // set all write enables to 0 by default
@@ -331,26 +343,48 @@ module bnn_fcc #(
                 active_layer_id <= cfg_header_out.layer_id; // latch active layer
                 active_is_weight <= (cfg_header_out.msg_type == 0); // latch whether its weight or threshold
                 cfg_addr_count <= '0; // reset address count
+
+                l0_np_count <= '0; // reset neuron processor counters
+                l1_np_count <= '0;
+                l2_np_count <= '0;
             end
 
             if(cfg_payload_valid[0] && cfg_payload_valid[1]) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     l0_cfg_we <= 1'b1;
                     l0_cfg_is_weight <= active_is_weight;
+                    l0_cfg_addr <= cfg_addr_count;
+                    l0_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l0_np_sel <= l0_np_count;
 
-
+                    if(cfg_addr_count reaches some point then you need to swtich neuron processors you are writing to) begin
+                        l0_np_count <= l0_np_count + 1;
+                        cfg_addr_count <= '0;
+                    end
                 end
                 if(active_layer_id == LAYER1) begin
                     l1_cfg_we <= 1'b1;
                     l1_cfg_is_weight <= active_is_weight;
+                    l1_cfg_addr <= cfg_addr_count;
+                    l1_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l1_np_sel <= l1_np_count;
 
-
+                    if(cfg_addr_count reaches some point then you need to swtich neuron processors you are writing to) begin
+                        l1_np_count <= l1_np_count + 1;
+                        cfg_addr_count <= '0;
+                    end
                 end
                 if(active_layer_id == LAYER2) begin
                     l2_cfg_we <= 1'b1;
                     l2_cfg_is_weight <= active_is_weight;
+                    l2_cfg_addr <= cfg_addr_count;
+                    l2_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l2_np_sel <= l2_np_count;
 
-
+                    if(cfg_addr_count reaches some point then you need to swtich neuron processors you are writing to) begin
+                        l2_np_count <= l2_np_count + 1;
+                        cfg_addr_count <= '0;
+                    end
                 end
             end
         end
