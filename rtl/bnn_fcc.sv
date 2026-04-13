@@ -59,16 +59,27 @@ module bnn_fcc #(
 // Config Manager and Data In Manager
 //------------------------------------------------------------------------------
 
-    localparam int CFG_PAYLOAD_LANES = CONFIG_BUS_WIDTH / 16;
+    // stuff for the config manager if it output 16 bits. I didnt wanna touch it
+    // localparam int CFG_PAYLOAD_LANES = CONFIG_BUS_WIDTH / 16;
+    // localparam int CFG_PAYLOAD_BYTES = CONFIG_BUS_WIDTH / 8;
+
+    // logic [15:0] cfg_payload_words [CFG_PAYLOAD_LANES-1:0];
+    // logic [CFG_PAYLOAD_BYTES-1:0] cfg_payload_valid;
+    // logic [CFG_PAYLOAD_LANES-1:0] cfg_payload_word_valid;
+    // logic cfg_payload_ready;
+    // logic cfg_error;
+
     localparam int CFG_PAYLOAD_BYTES = CONFIG_BUS_WIDTH / 8;
 
-    logic [15:0] cfg_payload_words [CFG_PAYLOAD_LANES-1:0];
+    logic [7:0] cfg_payload_bytes [0:CFG_PAYLOAD_BYTES-1]; // this is a bit gross but it lets us keep the payload as 16 bits without changing the config manager
     logic [CFG_PAYLOAD_BYTES-1:0] cfg_payload_valid;
-    logic [CFG_PAYLOAD_LANES-1:0] cfg_payload_word_valid;
-    logic cfg_payload_ready;
     logic cfg_error;
 
-    logic [(INPUT_DATA_WIDTH*2)-1:0] img_data_out[INPUT_BUS_WIDTH/16];
+    localparam int IMG_CHUNKS = INPUT_BUS_WIDTH / 16;
+    localparam int BIN_PIXELS_PER_CHUNK = 2;
+    localparam int BIN_PIXELS_PER_BEAT = INPUT_BUS_WIDTH / 8;
+
+    logic [BIN_PIXELS_PER_CHUNK-1:0] img_data_out[IMG_CHUNKS];
     logic [INPUT_BUS_WIDTH/16-1:0] img_data_out_valid;
     logic img_data_out_last;
     logic img_data_out_error;
@@ -95,7 +106,7 @@ module bnn_fcc #(
         .reserved(cfg_header_out.reserved),
         .header_valid(cfg_header_out_valid),
         
-        .data_out(cfg_payload_words),
+        .data_out(cfg_payload_bytes),
         .data_out_valid(cfg_payload_valid),
         .error(cfg_error)
     );
@@ -262,60 +273,103 @@ module bnn_fcc #(
 // Seralize Image Data and Feed into Layer 0
 //------------------------------------------------------------------------------
 
-    // might want to parameterize this for parallel input sizes
-    // might also want to make this it's own module so less logic is handled in the top level
-    localparam int IMG_CHUNKS = INPUT_BUS_WIDTH / 16;
+    localparam int IMG_BEAT_W = IMG_CHUNKS * 2; // 8 bits
 
-    logic [PARALLEL_INPUTS-1:0] img_buffer [IMG_CHUNKS];
-    logic [IMG_CHUNKS-1:0]      img_buf_valid; // this needs to be changed as img_data_out_valid is 4 bits, with the keeps already being handled
-                                               // this valid signal just says that as long as one of the 2 bytes is valid, to read it. anything that's zeroed out ignore. 
-    logic                       img_buf_busy;  // how is this defined?
-    logic [$clog2(IMG_CHUNKS)-1:0] img_idx;    
+    logic [IMG_BEAT_W-1:0] img_l0_buf;
+    logic                  img_l0_buf_valid;
 
-    // we can potentially reuse shift_reg.sv for this if necessary, so we can handle backstreaming
-    // and pass in our own valid signals and stuff to make it parameterized. 
+    logic [IMG_BEAT_W-1:0] packed_img_beat;
+
+    // NOTE: we are ignoring img_data_out_last because of the assumption that the input image size is going to be 784 bits
+    // we could change that to handle different sizes but that would also require changing 
+    // the logic inside the neuron processor for last assertion.
+
+    always_comb begin
+        packed_img_beat = '0;
+        for (int i = 0; i < IMG_CHUNKS; i++) begin // loop through image data output
+            packed_img_beat[i*2 +: 2] = img_data_out[i]; // pack all 8 bits into one 8 bit vector
+        end
+    end
+
     always_ff @(posedge clk or posedge rst) begin
-        if(rst) begin
-            img_buf_valid <= '0;
-            img_buf_busy <= 1'b0;
-            img_idx <= '0;
-            img_buffer <= '{default: '0};
-
-            layer0_x <= '0;
-            layer0_valid_in <= 1'b0;
+        if (rst) begin
+            img_l0_buf       <= '0;
+            img_l0_buf_valid <= 1'b0;
+            layer0_x         <= '0;
+            layer0_valid_in  <= 1'b0;
         end
         else begin
             layer0_valid_in <= 1'b0;
-            // so we're splitting up the process of taking the
-            // image data from the data_in_manger and feeding it to layer 0 with a 
-            // small buffer in between. this could be handled with a small fifo potentially. 
 
-            if(!img_buf_busy && (|img_data_out_valid)) begin
-                for(int i = 0; i < IMG_CHUNKS; i++) begin
-                    img_buffer[i] <= img_data_out[i];
-                    img_buf_valid[i] <= img_data_out_valid[i];
+            if (&img_data_out_valid) begin // if the data is valid (all of it)
+                if (!img_l0_buf_valid) begin // if buffer isnt in use
+                    // first packed 8-bit beat
+                    img_l0_buf       <= packed_img_beat; // send the packed bit
+                    img_l0_buf_valid <= 1'b1; // set buffer to valid
                 end
-                img_buf_busy <= 1'b1;
-                img_idx <= '0;
-            end
-            // this increments img_buffer to 1, 2, 3, 0 to reuse the entirety of the buffer
-            // this asynchronous fifo implementation was recommended by stitt and i like it a lot
-            // i'm just worried about code complexity mainly, and bugs from having logic in main and not being repeatable
-            // worried about this "busy" state as data is being streamed every second and this might
-            // bottleneck the design. data_in_manager already has a fifo inside it to handle streaming, so as long as
-            // the neurons can accept data every clock cycle, this might not be necessary
-            // we can employ the standard next = _r format for 2 process implemetnations and refactor this if
-            // we choose to keep it
-            else if(img_buf_busy) begin 
-                layer0_x <= img_buffer[img_idx];
-                layer0_valid_in <= img_buf_valid[img_idx];
-                img_idx <= img_idx + 1;
-                if(img_idx == IMG_CHUNKS - 1) begin
-                    img_buf_busy <= 1'b0;
+                else begin
+                    // second packed 8-bit beat -> emit full 16-bit input
+                    layer0_x         <= {packed_img_beat, img_l0_buf}; // if it is valid pack the current and previous beats
+                    layer0_valid_in  <= 1'b1; // set valid in for layer 0
+                    img_l0_buf_valid <= 1'b0; // reset buffer
                 end
             end
         end
     end
+
+    // might want to parameterize this for parallel input sizes
+    // might also want to make this it's own module so less logic is handled in the top level
+
+    // logic [PARALLEL_INPUTS-1:0] img_buffer [IMG_CHUNKS];
+    // logic [IMG_CHUNKS-1:0]      img_buf_valid; // this needs to be changed as img_data_out_valid is 4 bits, with the keeps already being handled
+    //                                            // this valid signal just says that as long as one of the 2 bytes is valid, to read it. anything that's zeroed out ignore. 
+    // logic                       img_buf_busy;  // how is this defined?
+    // logic [$clog2(IMG_CHUNKS)-1:0] img_idx;    
+
+    // // we can potentially reuse shift_reg.sv for this if necessary, so we can handle backstreaming
+    // // and pass in our own valid signals and stuff to make it parameterized. 
+    // always_ff @(posedge clk or posedge rst) begin
+    //     if(rst) begin
+    //         img_buf_valid <= '0;
+    //         img_buf_busy <= 1'b0;
+    //         img_idx <= '0;
+    //         img_buffer <= '{default: '0};
+
+    //         layer0_x <= '0;
+    //         layer0_valid_in <= 1'b0;
+    //     end
+    //     else begin
+    //         layer0_valid_in <= 1'b0;
+    //         // so we're splitting up the process of taking the
+    //         // image data from the data_in_manger and feeding it to layer 0 with a 
+    //         // small buffer in between. this could be handled with a small fifo potentially. 
+
+    //         if(!img_buf_busy && (|img_data_out_valid)) begin
+    //             for(int i = 0; i < IMG_CHUNKS; i++) begin
+    //                 img_buffer[i] <= img_data_out[i];
+    //                 img_buf_valid[i] <= img_data_out_valid[i];
+    //             end
+    //             img_buf_busy <= 1'b1;
+    //             img_idx <= '0;
+    //         end
+    //         // this increments img_buffer to 1, 2, 3, 0 to reuse the entirety of the buffer
+    //         // this asynchronous fifo implementation was recommended by stitt and i like it a lot
+    //         // i'm just worried about code complexity mainly, and bugs from having logic in main and not being repeatable
+    //         // worried about this "busy" state as data is being streamed every second and this might
+    //         // bottleneck the design. data_in_manager already has a fifo inside it to handle streaming, so as long as
+    //         // the neurons can accept data every clock cycle, this might not be necessary
+    //         // we can employ the standard next = _r format for 2 process implemetnations and refactor this if
+    //         // we choose to keep it
+    //         else if(img_buf_busy) begin 
+    //             layer0_x <= img_buffer[img_idx];
+    //             layer0_valid_in <= img_buf_valid[img_idx];
+    //             img_idx <= img_idx + 1;
+    //             if(img_idx == IMG_CHUNKS - 1) begin
+    //                 img_buf_busy <= 1'b0;
+    //             end
+    //         end
+    //     end
+    // end
 
 //------------------------------------------------------------------------------
 // Seralize Layer 0 Output and Feed into Layer 1
@@ -479,6 +533,24 @@ module bnn_fcc #(
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
+    logic [PARALLEL_INPUTS-1:0] cfg_data;
+    logic cfg_word_valid;
+
+    config_word_fifo #(
+        .CONFIG_BUS_WIDTH(64),
+        .FIFO_DEPTH(32)
+    ) config_word_fifo_inst (
+        .clk(clk),
+        .rst(rst),
+
+        .data_in(cfg_payload_bytes),
+        .data_valid_in(cfg_payload_valid),
+
+        .data_out(cfg_data),
+        .data_out_valid(cfg_word_valid),
+        .data_out_ready(1'b1) // always ready to accept config words
+    );
+
     localparam int LAYER0 = 8'd0;
     localparam int LAYER1 = 8'd1;
     localparam int LAYER2 = 8'd2;
@@ -552,12 +624,12 @@ module bnn_fcc #(
             end
 
             // TODO: i need to pack these like actually. We need like a small buffer to put together 1,0 3,2 5,4 7,6 yktv
-            if(cfg_payload_valid[0] && cfg_payload_valid[1]) begin // make sure 16 bits ready to write
+            if(cfg_word_valid) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     l0_cfg_we <= 1'b1;
                     l0_cfg_is_weight <= active_is_weight;
                     l0_cfg_addr <= cfg_addr_count;
-                    l0_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l0_cfg_data <= cfg_data; // data from fifo
                     l0_cfg_np_sel <= l0_np_count;
                     if(active_is_weight) begin // if we are writing weights
                         l0_weight_counter <= l0_weight_counter + 1; // we increment the amount of weights we have written
@@ -590,7 +662,7 @@ module bnn_fcc #(
                     l1_cfg_we <= 1'b1;
                     l1_cfg_is_weight <= active_is_weight;
                     l1_cfg_addr <= cfg_addr_count;
-                    l1_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l1_cfg_data <= cfg_data; // data from fifo
                     l1_cfg_np_sel <= l1_np_count;
 
                     if(active_is_weight) begin // if we are writing weights
@@ -624,7 +696,7 @@ module bnn_fcc #(
                     l2_cfg_we <= 1'b1;
                     l2_cfg_is_weight <= active_is_weight;
                     l2_cfg_addr <= cfg_addr_count;
-                    l2_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l2_cfg_data <= cfg_data; // data from fifo
                     l2_cfg_np_sel <= l2_np_count;
 
                     if(active_is_weight) begin // if we are writing weights
