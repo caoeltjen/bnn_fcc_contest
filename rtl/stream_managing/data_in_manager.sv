@@ -14,7 +14,7 @@ module data_in_manager#(
 
 
     // output the data
-    output logic [(INPUT_DATA_WIDTH*2)-1:0] img_data_out[INPUT_BUS_WIDTH/16], 
+    output logic [(INPUT_DATA_WIDTH*2)/INPUT_DATA_WIDTH-1:0] img_data_out[INPUT_BUS_WIDTH/16], 
     // neurons accept 16 bits of data, so push out two pixels at a time, for 
     // the size of the bus, so 4 elements of  16 bits. 
     output logic [INPUT_BUS_WIDTH/16-1:0] img_data_out_valid, // /16 so it's 4 bits, one for each 16 bit chunk of the bus
@@ -25,8 +25,8 @@ module data_in_manager#(
 
     // struct to hold two pixels of data. readable syntax
     typedef struct packed {
-        logic [INPUT_DATA_WIDTH-1:0] pixel1;
-        logic [INPUT_DATA_WIDTH-1:0] pixel0;
+        logic pixel1;
+        logic pixel0;
     } data_t;
 
     data_t img_data_out_r[INPUT_BUS_WIDTH/16], img_data_out_next[INPUT_BUS_WIDTH/16];
@@ -68,11 +68,26 @@ module data_in_manager#(
         .shift_out_ready(shift_out_ready) 
     );
 
+    for (genvar i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
+        binarize_input#(
+            .INPUT_DATA_WIDTH(8)
+        ) binarizer_inst (
+            .data_in(shift_out_data[i*16 +: 8]), // first pixel
+            .data_out(img_data_out_next[i].pixel0)
+        );
+        binarize_input#(
+            .INPUT_DATA_WIDTH(8)
+        ) binarizer_inst2 (
+            .data_in(shift_out_data[i*16+8 +: 8]), // second pixel
+            .data_out(img_data_out_next[i].pixel1)
+        );
+    end
+
 
     always_comb begin
         next_state = curr_state;
         shift_out_ready = 1'b0;
-        img_data_out_next = img_data_out_r;
+        // img_data_out_next = img_data_out_r;
         img_data_out_valid_next = '0;
         img_data_out_last_next = 1'b0;
         img_data_out_error_next = img_data_out_error_r;
@@ -83,8 +98,6 @@ module data_in_manager#(
                     shift_out_ready = 1'b1;
                     // read first beat since it's valid, so we'll have the first 8 pixels
                     for (int i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
-                        img_data_out_next[i].pixel0 = shift_out_data[i*16 +: 8];
-                        img_data_out_next[i].pixel1 = shift_out_data[i*16+8 +: 8];
                         img_data_out_valid_next[i] = shift_out_keep[i*2] | shift_out_keep[i*2 + 1];
                     end
                     img_data_out_last_next = shift_out_last;
@@ -95,8 +108,6 @@ module data_in_manager#(
                 if (shift_out_valid && !shift_out_last) begin
                     shift_out_ready = 1'b1;
                     for (int i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
-                        img_data_out_next[i].pixel0 = shift_out_data[i*16 +: 8];
-                        img_data_out_next[i].pixel1 = shift_out_data[i*16+8 +: 8];
                         img_data_out_valid_next[i] = shift_out_keep[i*2] | shift_out_keep[i*2 + 1];
                     end
                     img_data_out_last_next = shift_out_last;
@@ -104,8 +115,6 @@ module data_in_manager#(
                 end else if (shift_out_valid && shift_out_last) begin
                     shift_out_ready = 1'b1;
                     for (int i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
-                        img_data_out_next[i].pixel0 = shift_out_data[i*16 +: 8];
-                        img_data_out_next[i].pixel1 = shift_out_data[i*16+8 +: 8];
                         img_data_out_valid_next[i] = shift_out_keep[i*2] | shift_out_keep[i*2 + 1];
                     end
                     img_data_out_last_next = shift_out_last;

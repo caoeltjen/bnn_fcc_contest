@@ -10,7 +10,7 @@ module tb_data_in_manager #(
 
     localparam int BYTE_LANES = INPUT_BUS_WIDTH / 8;
     localparam int OUT_LANES = INPUT_BUS_WIDTH / 16;
-    localparam int OUT_CHUNK_W = INPUT_DATA_WIDTH * 2;
+    localparam int OUT_CHUNK_W = 2;
 
     typedef bit [INPUT_BUS_WIDTH-1:0] bus_word_t;
     typedef bit [BYTE_LANES-1:0] keep_t;
@@ -95,6 +95,8 @@ module tb_data_in_manager #(
         output logic expected_error
     );
         bus_word_t masked_beat;
+        logic [7:0] first_pixel;
+        logic [7:0] second_pixel;
 
         masked_beat = '0;
         expected_valid = '0;
@@ -108,7 +110,10 @@ module tb_data_in_manager #(
         end
 
         for (int lane = 0; lane < OUT_LANES; lane++) begin
-            expected_chunks[lane] = masked_beat[lane*16 +: 16];
+            first_pixel = masked_beat[lane*16 +: 8];
+            second_pixel = masked_beat[lane*16 + 8 +: 8];
+            expected_chunks[lane][0] = (first_pixel >= 8'd128);
+            expected_chunks[lane][1] = (second_pixel >= 8'd128);
             expected_valid[lane] = keep[2*lane] | keep[2*lane + 1];
         end
     endtask
