@@ -441,9 +441,9 @@ module bnn_fcc #(
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
-    localparam int LAYER0 = 8'd1;
-    localparam int LAYER1 = 8'd2;
-    localparam int LAYER2 = 8'd3;
+    localparam int LAYER0 = 8'd0;
+    localparam int LAYER1 = 8'd1;
+    localparam int LAYER2 = 8'd2;
 
     logic [7:0] active_layer_id;
     logic       active_is_weight;
