@@ -479,9 +479,9 @@ module bnn_fcc #(
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
-    localparam logic[7:0] LAYER0 = 8'd0;
-    localparam logic[7:0] LAYER1 = 8'd1;
-    localparam logic[7:0] LAYER2 = 8'd2;
+    localparam int LAYER0 = 8'd0;
+    localparam int LAYER1 = 8'd1;
+    localparam int LAYER2 = 8'd2;
 
     logic [7:0] active_layer_id;
     logic       active_is_weight;
@@ -495,20 +495,7 @@ module bnn_fcc #(
     logic [$clog2(TOPOLOGY[0] / PARALLEL_INPUTS)-1:0] l0_weight_counter;
     logic [$clog2(TOPOLOGY[1] / PARALLEL_INPUTS)-1:0] l1_weight_counter;
     logic [$clog2(TOPOLOGY[2] / PARALLEL_INPUTS)-1:0] l2_weight_counter;
-    logic [15:0] cfg_word_buffer [CFG_PAYLOAD_LANES-1:0];
-    logic [$clog2(CFG_PAYLOAD_LANES+1)-1:0] cfg_word_count;
-    logic [$clog2(CFG_PAYLOAD_LANES)-1:0] cfg_word_index;
-    logic cfg_word_valid;
-    logic [15:0] cfg_word_data;
 
-    for (genvar i = 0; i < CFG_PAYLOAD_LANES; i++) begin : gen_cfg_payload_word_valid
-        assign cfg_payload_word_valid[i] = cfg_payload_valid[i*2] | cfg_payload_valid[i*2 + 1];
-    end
-
-    assign cfg_payload_ready = (cfg_word_count == '0);
-    assign cfg_word_valid = (cfg_word_count != '0);
-    assign cfg_word_data = cfg_word_buffer[cfg_word_index];
-    
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
             l0_cfg_we <= 1'b0;
@@ -542,20 +529,11 @@ module bnn_fcc #(
             l2_weight_counter <= '0;
 
             weight_iter <= '0;
-            cfg_word_buffer <= '{default: '0};
-            cfg_word_count <= '0;
-            cfg_word_index <= '0;
         end
         else begin
             l0_cfg_we <= 1'b0; // set all write enables to 0 by default
             l1_cfg_we <= 1'b0;
             l2_cfg_we <= 1'b0;
-
-            if(cfg_payload_ready && (|cfg_payload_valid)) begin
-                cfg_word_buffer <= cfg_payload_words;
-                cfg_word_count <= $countones(cfg_payload_word_valid);
-                cfg_word_index <= '0;
-            end
 
             if(cfg_header_out_valid) begin
                 active_layer_id <= cfg_header_out.layer_id; // latch active layer
@@ -573,12 +551,13 @@ module bnn_fcc #(
                 weight_iter <= '0;
             end
 
-            if(cfg_word_valid) begin
+            // TODO: i need to pack these like actually. We need like a small buffer to put together 1,0 3,2 5,4 7,6 yktv
+            if(cfg_payload_valid[0] && cfg_payload_valid[1]) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     l0_cfg_we <= 1'b1;
                     l0_cfg_is_weight <= active_is_weight;
                     l0_cfg_addr <= cfg_addr_count;
-                    l0_cfg_data <= cfg_word_data;
+                    l0_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
                     l0_cfg_np_sel <= l0_np_count;
                     if(active_is_weight) begin // if we are writing weights
                         l0_weight_counter <= l0_weight_counter + 1; // we increment the amount of weights we have written
@@ -611,7 +590,7 @@ module bnn_fcc #(
                     l1_cfg_we <= 1'b1;
                     l1_cfg_is_weight <= active_is_weight;
                     l1_cfg_addr <= cfg_addr_count;
-                    l1_cfg_data <= cfg_word_data;
+                    l1_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
                     l1_cfg_np_sel <= l1_np_count;
 
                     if(active_is_weight) begin // if we are writing weights
@@ -645,7 +624,7 @@ module bnn_fcc #(
                     l2_cfg_we <= 1'b1;
                     l2_cfg_is_weight <= active_is_weight;
                     l2_cfg_addr <= cfg_addr_count;
-                    l2_cfg_data <= cfg_word_data;
+                    l2_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
                     l2_cfg_np_sel <= l2_np_count;
 
                     if(active_is_weight) begin // if we are writing weights
@@ -673,14 +652,6 @@ module bnn_fcc #(
                             cfg_addr_count <= cfg_addr_count + 1; // increment the address
                         end
                     end
-                end
-
-                if(cfg_word_index + 1 >= cfg_word_count) begin
-                    cfg_word_count <= '0;
-                    cfg_word_index <= '0;
-                end
-                else begin
-                    cfg_word_index <= cfg_word_index + 1'b1;
                 end
             end
         end
