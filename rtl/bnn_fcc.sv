@@ -59,8 +59,13 @@ module bnn_fcc #(
 // Config Manager and Data In Manager
 //------------------------------------------------------------------------------
 
-    logic [7:0] cfg_payload_bytes [7:0];
-    logic [7:0] cfg_payload_valid;
+    localparam int CFG_PAYLOAD_LANES = CONFIG_BUS_WIDTH / 16;
+    localparam int CFG_PAYLOAD_BYTES = CONFIG_BUS_WIDTH / 8;
+
+    logic [15:0] cfg_payload_words [CFG_PAYLOAD_LANES-1:0];
+    logic [CFG_PAYLOAD_BYTES-1:0] cfg_payload_valid;
+    logic [CFG_PAYLOAD_LANES-1:0] cfg_payload_word_valid;
+    logic cfg_payload_ready;
     logic cfg_error;
 
     logic [(INPUT_DATA_WIDTH*2)-1:0] img_data_out[INPUT_BUS_WIDTH/16];
@@ -90,7 +95,7 @@ module bnn_fcc #(
         .reserved(cfg_header_out.reserved),
         .header_valid(cfg_header_out_valid),
         
-        .data_out(cfg_payload_bytes),
+        .data_out(cfg_payload_words),
         .data_out_valid(cfg_payload_valid),
         .error(cfg_error)
     );
@@ -120,19 +125,25 @@ module bnn_fcc #(
 
     localparam int PN0 = PARALLEL_NEURONS[0];
 
-    logic l0_cfg_we;
-    logic l0_cfg_is_weight;
-    logic [$clog2(PN0)-1:0] l0_cfg_np_sel;
-    logic [ADDR_W-1:0] l0_cfg_addr;
-    logic [PARALLEL_INPUTS-1:0] l0_cfg_data;
+    logic l0_cfg_we; //write enable for layer 0 brams
+    logic l0_cfg_is_weight; // 0=weight, 1=threshold
+    logic [$clog2(PN0)-1:0] l0_cfg_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
+    logic [ADDR_W-1:0] l0_cfg_addr; // address for the bram we are writing to
+    logic [PARALLEL_INPUTS-1:0] l0_cfg_data; // weights/thresholds being written to bram
 
-    logic [PN0-1:0] l0_y;
-    logic [PN0-1:0][PARALLEL_INPUTS-1:0] l0_popcount;
-    logic [PN0-1:0] l0_valid_out;
+    logic [PN0-1:0] l0_y; // output of layer 0 neuron processors for each processor
+    logic [PN0-1:0][PARALLEL_INPUTS-1:0] l0_popcount; // packed signal of popcount results for each neuron processor. 
+    logic [PN0-1:0] l0_valid_out; // valid
 
-    logic [PARALLEL_INPUTS-1:0] layer0_x;
-    logic layer0_valid_in;
+    logic [PARALLEL_INPUTS-1:0] layer0_x; // image data
+    logic layer0_valid_in; // valid
 
+    // questions:
+        // how many neurons are being instantiated?
+        // how is data being streamed to all the neurons?
+        // is this pipelined or sequential for solving the popcount of all pixels in img for all the neurons instantiated?
+        // how are the weights and thresholds being stored/streamed to the neurons? 
+        // if there's waveform examples of how layer bank works, please show so i can visualize better
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN0),
@@ -162,19 +173,22 @@ module bnn_fcc #(
 
     localparam int PN1 = PARALLEL_NEURONS[1];
 
-    logic l1_cfg_we;
-    logic l1_cfg_is_weight;
-    logic [$clog2(PN1)-1:0] l1_cfg_np_sel;
-    logic [ADDR_W-1:0] l1_cfg_addr;
-    logic [PARALLEL_INPUTS-1:0] l1_cfg_data;
+    logic l1_cfg_we; // write enable for config to layer 1 brams
+    logic l1_cfg_is_weight; // 0=weight, 1=threshold
+    logic [$clog2(PN1)-1:0] l1_cfg_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
+    logic [ADDR_W-1:0] l1_cfg_addr; // address for the bram we are writing to
+    logic [PARALLEL_INPUTS-1:0] l1_cfg_data; // weights/thresholds being written to bram
 
-    logic [PN1-1:0] l1_y;
-    logic [PN1-1:0][PARALLEL_INPUTS-1:0] l1_popcount;
+    logic [PN1-1:0] l1_y; // output of layer 1 neuron processors for each processor
+    logic [PN1-1:0][PARALLEL_INPUTS-1:0] l1_popcount; // packed signal of popcount results for each neuron processor. 
     logic [PN1-1:0] l1_valid_out;
 
-    logic [PARALLEL_INPUTS-1:0] layer1_x;
+    logic [PARALLEL_INPUTS-1:0] layer1_x; // img data input
     logic layer1_valid_in;
 
+    // questions
+        // how does it take inputs from layer 0? anything to handle backstream for the streaming of data?
+        // pipelined?
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN1),
@@ -217,6 +231,10 @@ module bnn_fcc #(
     logic [PARALLEL_INPUTS-1:0] layer2_x;
     logic layer2_valid_in;
 
+    // questions
+        // ditto for the previous layers
+        // how is output being asserted?
+        // how is addressing and writing to brams being handled?
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN2),
@@ -244,13 +262,18 @@ module bnn_fcc #(
 // Seralize Image Data and Feed into Layer 0
 //------------------------------------------------------------------------------
 
+    // might want to parameterize this for parallel input sizes
+    // might also want to make this it's own module so less logic is handled in the top level
     localparam int IMG_CHUNKS = INPUT_BUS_WIDTH / 16;
 
     logic [PARALLEL_INPUTS-1:0] img_buffer [IMG_CHUNKS];
-    logic [IMG_CHUNKS-1:0]      img_buf_valid;
-    logic                       img_buf_busy;
-    logic [$clog2(IMG_CHUNKS)-1:0] img_idx;
+    logic [IMG_CHUNKS-1:0]      img_buf_valid; // this needs to be changed as img_data_out_valid is 4 bits, with the keeps already being handled
+                                               // this valid signal just says that as long as one of the 2 bytes is valid, to read it. anything that's zeroed out ignore. 
+    logic                       img_buf_busy;  // how is this defined?
+    logic [$clog2(IMG_CHUNKS)-1:0] img_idx;    
 
+    // we can potentially reuse shift_reg.sv for this if necessary, so we can handle backstreaming
+    // and pass in our own valid signals and stuff to make it parameterized. 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
             img_buf_valid <= '0;
@@ -263,6 +286,10 @@ module bnn_fcc #(
         end
         else begin
             layer0_valid_in <= 1'b0;
+            // so we're splitting up the process of taking the
+            // image data from the data_in_manger and feeding it to layer 0 with a 
+            // small buffer in between. this could be handled with a small fifo potentially. 
+
             if(!img_buf_busy && (|img_data_out_valid)) begin
                 for(int i = 0; i < IMG_CHUNKS; i++) begin
                     img_buffer[i] <= img_data_out[i];
@@ -271,7 +298,15 @@ module bnn_fcc #(
                 img_buf_busy <= 1'b1;
                 img_idx <= '0;
             end
-            else if(img_buf_busy) begin
+            // this increments img_buffer to 1, 2, 3, 0 to reuse the entirety of the buffer
+            // this asynchronous fifo implementation was recommended by stitt and i like it a lot
+            // i'm just worried about code complexity mainly, and bugs from having logic in main and not being repeatable
+            // worried about this "busy" state as data is being streamed every second and this might
+            // bottleneck the design. data_in_manager already has a fifo inside it to handle streaming, so as long as
+            // the neurons can accept data every clock cycle, this might not be necessary
+            // we can employ the standard next = _r format for 2 process implemetnations and refactor this if
+            // we choose to keep it
+            else if(img_buf_busy) begin 
                 layer0_x <= img_buffer[img_idx];
                 layer0_valid_in <= img_buf_valid[img_idx];
                 img_idx <= img_idx + 1;
@@ -289,6 +324,9 @@ module bnn_fcc #(
     logic [PN0-1:0] l01_buf [PARALLEL_INPUTS / PN0 - 1:0]; // buffer for layer 0 outputs
     logic l01_buf_full; // flag to see when buffer is full
     logic [$clog2(PARALLEL_INPUTS / PN0)-1:0] l01_buf_idx; // index to keep track of where we are writing in the buffer
+
+    // this is fire
+    // might neeed to make proper handshakes here but that's my only thing
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -457,6 +495,19 @@ module bnn_fcc #(
     logic [$clog2(TOPOLOGY[0] / PARALLEL_INPUTS)-1:0] l0_weight_counter;
     logic [$clog2(TOPOLOGY[1] / PARALLEL_INPUTS)-1:0] l1_weight_counter;
     logic [$clog2(TOPOLOGY[2] / PARALLEL_INPUTS)-1:0] l2_weight_counter;
+    logic [15:0] cfg_word_buffer [CFG_PAYLOAD_LANES-1:0];
+    logic [$clog2(CFG_PAYLOAD_LANES+1)-1:0] cfg_word_count;
+    logic [$clog2(CFG_PAYLOAD_LANES)-1:0] cfg_word_index;
+    logic cfg_word_valid;
+    logic [15:0] cfg_word_data;
+
+    for (genvar i = 0; i < CFG_PAYLOAD_LANES; i++) begin : gen_cfg_payload_word_valid
+        assign cfg_payload_word_valid[i] = cfg_payload_valid[i*2] | cfg_payload_valid[i*2 + 1];
+    end
+
+    assign cfg_payload_ready = (cfg_word_count == '0);
+    assign cfg_word_valid = (cfg_word_count != '0);
+    assign cfg_word_data = cfg_word_buffer[cfg_word_index];
     
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -491,11 +542,20 @@ module bnn_fcc #(
             l2_weight_counter <= '0;
 
             weight_iter <= '0;
+            cfg_word_buffer <= '{default: '0};
+            cfg_word_count <= '0;
+            cfg_word_index <= '0;
         end
         else begin
             l0_cfg_we <= 1'b0; // set all write enables to 0 by default
             l1_cfg_we <= 1'b0;
             l2_cfg_we <= 1'b0;
+
+            if(cfg_payload_ready && (|cfg_payload_valid)) begin
+                cfg_word_buffer <= cfg_payload_words;
+                cfg_word_count <= $countones(cfg_payload_word_valid);
+                cfg_word_index <= '0;
+            end
 
             if(cfg_header_out_valid) begin
                 active_layer_id <= cfg_header_out.layer_id; // latch active layer
@@ -513,13 +573,12 @@ module bnn_fcc #(
                 weight_iter <= '0;
             end
 
-            // TODO: i need to pack these like actually. We need like a small buffer to put together 1,0 3,2 5,4 7,6 yktv
-            if(cfg_payload_valid[0] && cfg_payload_valid[1]) begin // make sure 16 bits ready to write
+            if(cfg_word_valid) begin
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     l0_cfg_we <= 1'b1;
                     l0_cfg_is_weight <= active_is_weight;
                     l0_cfg_addr <= cfg_addr_count;
-                    l0_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l0_cfg_data <= cfg_word_data;
                     l0_cfg_np_sel <= l0_np_count;
                     if(active_is_weight) begin // if we are writing weights
                         l0_weight_counter <= l0_weight_counter + 1; // we increment the amount of weights we have written
@@ -552,7 +611,7 @@ module bnn_fcc #(
                     l1_cfg_we <= 1'b1;
                     l1_cfg_is_weight <= active_is_weight;
                     l1_cfg_addr <= cfg_addr_count;
-                    l1_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l1_cfg_data <= cfg_word_data;
                     l1_cfg_np_sel <= l1_np_count;
 
                     if(active_is_weight) begin // if we are writing weights
@@ -586,7 +645,7 @@ module bnn_fcc #(
                     l2_cfg_we <= 1'b1;
                     l2_cfg_is_weight <= active_is_weight;
                     l2_cfg_addr <= cfg_addr_count;
-                    l2_cfg_data <= {cfg_payload_bytes[1], cfg_payload_bytes[0]}; // combine
+                    l2_cfg_data <= cfg_word_data;
                     l2_cfg_np_sel <= l2_np_count;
 
                     if(active_is_weight) begin // if we are writing weights
@@ -614,6 +673,14 @@ module bnn_fcc #(
                             cfg_addr_count <= cfg_addr_count + 1; // increment the address
                         end
                     end
+                end
+
+                if(cfg_word_index + 1 >= cfg_word_count) begin
+                    cfg_word_count <= '0;
+                    cfg_word_index <= '0;
+                end
+                else begin
+                    cfg_word_index <= cfg_word_index + 1'b1;
                 end
             end
         end
