@@ -13,7 +13,7 @@ module neuron_top_struct #(
     input logic [ADDR_W-1:0]     w_read_addr,
 
     input  logic          cfg_w_we,
-    input  logic [9-1:0]    cfg_w_addr,
+    input  logic [8:0]    cfg_w_addr,
     input  logic [PW*4-1:0] cfg_w_data,
 
     input  logic          cfg_t_we,

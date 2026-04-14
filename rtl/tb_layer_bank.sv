@@ -15,7 +15,7 @@ module tb_layer_bank #(
     localparam int NUM_BEATS_PER_NEURON = (INPUTS_PER_NEURON + PW - 1) / PW;
     localparam int BEAT_CNT_W = (NUM_BEATS_PER_NEURON <= 1) ? 1 : $clog2(NUM_BEATS_PER_NEURON);
 
-    localparam int DEPTH = (1 << ADDR_W);
+    localparam int DEPTH = 512;
 
     logic                   rst;
     logic                   ram_finished = 1'b0;
@@ -47,7 +47,7 @@ module tb_layer_bank #(
     mailbox scoreboard_output_mailbox = new;
     mailbox driver_mailbox = new;
 
-    .layer_bank #(
+    layer_bank #(
         .PW(PW),
         .PN(PN),
         .ADDR_W(ADDR_W),

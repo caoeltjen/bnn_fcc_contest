@@ -14,8 +14,8 @@ module layer_bank #(
 
     input  logic                   cfg_w_we,
     input  logic [$clog2(PN)-1:0]  cfg_w_np_sel,
-    input  logic [ADDR_W-1:0]      cfg_w_addr,
-    input  logic [PW-1:0]          cfg_w_data,
+    input  logic [8:0]      cfg_w_addr,
+    input  logic [63:0]          cfg_w_data,
 
     input  logic [PN-1:0]          cfg_t_we_np,
     input  logic [PN-1:0][ADDR_W-1:0] cfg_t_addr_np,
@@ -27,7 +27,6 @@ module layer_bank #(
 );
 
     logic [PN-1:0] cfg_w_we_np;
-    logic [PN-1:0] cfg_t_we_np;
 
     logic [PN-1:0] w_written;
     logic [PN-1:0] t_written;
@@ -49,12 +48,17 @@ module layer_bank #(
             t_written <= '0;
         end
         else begin
-            if (cfg_we) begin
-                if (cfg_is_weight) begin
-                    w_written[cfg_np_sel] <= 1'b1;
+            // Weight writes (one-hot decoded)
+            for (int i = 0; i < PN; i++) begin
+                if (cfg_w_we_np[i]) begin
+                    w_written[i] <= 1'b1;
                 end
-                else begin
-                    t_written[cfg_np_sel] <= 1'b1;
+            end
+
+            // Threshold writes (already per NP)
+            for (int i = 0; i < PN; i++) begin
+                if (cfg_t_we_np[i]) begin
+                    t_written[i] <= 1'b1;
                 end
             end
         end

@@ -12,7 +12,7 @@ module neuron_top #(
     input logic           cfg_done,
 
     input  logic         cfg_w_we,
-    input  logic [9-1:0]   cfg_w_addr,
+    input  logic [8:0]   cfg_w_addr,
     input  logic [63:0] cfg_w_data,
 
     input  logic         cfg_t_we,
