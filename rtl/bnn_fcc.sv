@@ -533,6 +533,35 @@ module bnn_fcc #(
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
+    logic [7:0] cfg_desc_layer_id;
+    logic cfg_desc_is_weight;
+    logic [31:0] cfg_desc_total_words;
+    logic cfg_desc_valid;
+    logic cfg_desc_ready;
+
+    logic cfg_msg_active;
+    logic [7:0] active_layer_id;
+    logic active_is_weight;
+    logic [31:0] cfg_words_remaining;
+
+    config_desc_fifo #(
+        .FIFO_DEPTH(8)
+    ) config_desc_fifo_inst (
+        .clk(clk),
+        .rst(rst),
+
+        .layer_id_in(cfg_header_out.layer_id),
+        .is_weight_in(cfg_header_out.msg_type == 0), // assuming msg_type 0 is weight and 1 is threshold
+        .total_words_in(cfg_header_out.total_bytes),
+        .push(cfg_header_out_valid),
+
+        .layer_id_out(cfg_desc_layer_id),
+        .is_weight_out(cfg_desc_is_weight),
+        .total_words_out(cfg_desc_total_words),
+        .valid_out(cfg_desc_valid),
+        .ready_in(cfg_desc_ready)
+    );
+
     logic [PARALLEL_INPUTS-1:0] cfg_data;
     logic cfg_word_valid;
 
@@ -548,15 +577,13 @@ module bnn_fcc #(
 
         .data_out(cfg_data),
         .data_out_valid(cfg_word_valid),
-        .data_out_ready(1'b1) // always ready to accept config words
+        .data_out_ready(cfg_msg_active)
     );
 
     localparam int LAYER0 = 8'd0;
     localparam int LAYER1 = 8'd1;
     localparam int LAYER2 = 8'd2;
 
-    logic [7:0] active_layer_id;
-    logic       active_is_weight;
     logic [ADDR_W-1:0] cfg_addr_count;
     logic [31:0] weight_iter; // can parameterize this if we want to just didnt feel like doing the math
 
@@ -567,6 +594,8 @@ module bnn_fcc #(
     logic [$clog2(TOPOLOGY[0] / PARALLEL_INPUTS)-1:0] l0_weight_counter;
     logic [$clog2(TOPOLOGY[1] / PARALLEL_INPUTS)-1:0] l1_weight_counter;
     logic [$clog2(TOPOLOGY[2] / PARALLEL_INPUTS)-1:0] l2_weight_counter;
+
+    assign cfg_desc_ready = !cfg_msg_active;
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
@@ -601,15 +630,22 @@ module bnn_fcc #(
             l2_weight_counter <= '0;
 
             weight_iter <= '0;
+
+            cfg_msg_active <= 1'b0;
+            cfg_words_remaining <= '0;
         end
         else begin
             l0_cfg_we <= 1'b0; // set all write enables to 0 by default
             l1_cfg_we <= 1'b0;
             l2_cfg_we <= 1'b0;
 
-            if(cfg_header_out_valid) begin
-                active_layer_id <= cfg_header_out.layer_id; // latch active layer
-                active_is_weight <= (cfg_header_out.msg_type == 0); // latch whether its weight or threshold
+            if(!cfg_msg_active && cfg_desc_valid) begin
+                cfg_msg_active <= 1'b1; // set message active when we get a valid config description
+
+                active_layer_id <= cfg_desc_layer_id; // latch active layer
+                active_is_weight <= cfg_desc_is_weight; // latch whether its weight or threshold
+                cfg_words_remaining <= cfg_desc_total_words;
+
                 cfg_addr_count <= '0; // reset address count
 
                 l0_np_count <= '0; // reset neuron processor counters
@@ -624,7 +660,7 @@ module bnn_fcc #(
             end
 
             // TODO: i need to pack these like actually. We need like a small buffer to put together 1,0 3,2 5,4 7,6 yktv
-            if(cfg_word_valid) begin // make sure 16 bits ready to write
+            if(cfg_word_valid && cfg_msg_active) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     l0_cfg_we <= 1'b1;
                     l0_cfg_is_weight <= active_is_weight;
@@ -724,6 +760,10 @@ module bnn_fcc #(
                             cfg_addr_count <= cfg_addr_count + 1; // increment the address
                         end
                     end
+                end
+                cfg_words_remaining <= cfg_words_remaining - 1; // decrement the amount of words remaining in the message
+                if(cfg_words_remaining == 1) begin
+                    cfg_msg_active <= 1'b0; // if this is the last word, set message active to 0 to wait for the next config description
                 end
             end
         end
