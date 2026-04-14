@@ -552,7 +552,7 @@ module bnn_fcc #(
 
         .layer_id_in(cfg_header_out.layer_id),
         .is_weight_in(cfg_header_out.msg_type == 0), // assuming msg_type 0 is weight and 1 is threshold
-        .total_words_in(cfg_header_out.total_bytes),
+        .total_words_in(cfg_header_out.total_bytes >> 1),
         .push(cfg_header_out_valid),
 
         .layer_id_out(cfg_desc_layer_id),
@@ -567,7 +567,7 @@ module bnn_fcc #(
 
     config_word_fifo #(
         .CONFIG_BUS_WIDTH(64),
-        .FIFO_DEPTH(32)
+        .FIFO_DEPTH(128)
     ) config_word_fifo_inst (
         .clk(clk),
         .rst(rst),

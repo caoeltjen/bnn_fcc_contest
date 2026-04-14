@@ -22,7 +22,7 @@ module config_desc_fifo #(
     typedef struct packed {
         logic [7:0] layer_id;
         logic is_weight;
-        logic [15:0] total_words;
+        logic [31:0] total_words;
     } cfg_desc_t;
 
     cfg_desc_t fifo_mem [0:FIFO_DEPTH-1];
