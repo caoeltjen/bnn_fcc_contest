@@ -1,6 +1,6 @@
 module neuron_top #(
     parameter int PW = 16,
-    parameter int ADDR_W = 10,
+    parameter int ADDR_W = 11,
     parameter int INPUTS_PER_NEURON = 784
 )(
     input logic           clk,
@@ -12,8 +12,8 @@ module neuron_top #(
     input logic           cfg_done,
 
     input  logic         cfg_w_we,
-    input  logic [ADDR_W-1:0]   cfg_w_addr,
-    input  logic [PW-1:0] cfg_w_data,
+    input  logic [9-1:0]   cfg_w_addr,
+    input  logic [PW*4-1:0] cfg_w_data,
 
     input  logic         cfg_t_we,
     input  logic [ADDR_W-1:0]   cfg_t_addr,

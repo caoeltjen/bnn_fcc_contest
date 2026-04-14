@@ -1,6 +1,6 @@
 module neuron_top_cont # (
     parameter int PW = 8,
-    parameter int ADDR_W = 10,
+    parameter int ADDR_W = 11,
     parameter int INPUTS_PER_NEURON = 784
 )(
     input logic            clk,
