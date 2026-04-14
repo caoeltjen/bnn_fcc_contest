@@ -41,7 +41,7 @@ module tb_layer_bank #(
     int passed, failed;
 
     logic [15:0] w_bram_data [0:PN-1][0:DEPTH*4-1];
-    logic [PW-1:0] t_bram_data [0:PN-1][0:DEPTH-1];
+    logic [PW-1:0] t_bram_data [0:PN-1][0:DEPTH*4-1];
 
     mailbox scoreboard_input_mailbox = new;
     mailbox scoreboard_output_mailbox = new;
@@ -141,45 +141,6 @@ module tb_layer_bank #(
         rst <= 1'b0;
     end
 
-    // initial begin : load_bram_data
-    //     int unsigned depth = (1 << ADDR_W);
-
-    //     @(posedge clk iff !rst);
-
-    //     for(int unsigned neuron = 0; neuron < PN; neuron++) begin
-
-    //         //Weight Loading
-    //         for(int unsigned addr = 0; addr < depth; addr++) begin
-    //             logic [PW-1:0] w_data;
-    //             w_data = $urandom;
-    //             cfg_we <= 1'b1;
-    //             cfg_is_weight <= 1'b1;
-    //             cfg_np_sel <= neuron;
-    //             cfg_addr <= addr;
-    //             cfg_data <= w_data;
-    //             w_bram_data[neuron][addr] = w_data;
-    //             @(posedge clk);
-    //         end
-
-    //         //Threshold Loading
-    //         for(int unsigned addr = 0; addr < depth; addr++) begin
-    //             logic [PW-1:0] t_data;
-    //             t_data = $urandom_range(0, 16'h00AA);;
-    //             cfg_we <= 1'b1;
-    //             cfg_is_weight <= 1'b0;
-    //             cfg_np_sel <= neuron;
-    //             cfg_addr <= addr;
-    //             cfg_data <= t_data;
-    //             t_bram_data[neuron][addr] = t_data;
-    //             @(posedge clk);
-    //         end
-    //     end
-
-    //     cfg_we <= 1'b0;
-    //     ram_finished <= 1'b1;
-    //     @(posedge clk);
-    // end
-
     initial begin : load_bram_data
         int unsigned depth = DEPTH;
 
@@ -214,7 +175,7 @@ module tb_layer_bank #(
         // ----------------------------
         // THRESHOLDS (PARALLEL WRITE)
         // ----------------------------
-        for (int unsigned addr = 0; addr < depth; addr++) begin
+        for (int unsigned addr = 0; addr < depth*4; addr++) begin
             cfg_t_we_np <= '1;
 
             for (int unsigned neuron = 0; neuron < PN; neuron++) begin
@@ -278,41 +239,41 @@ module tb_layer_bank #(
     initial begin : start_monitor
         scoreboard_input_t txn;
         bit [PW-1:0] x_q[$];
-        bit [PW-1:0] w_q[0:PN-1][$];  // per neuron
+        bit [PW-1:0] w_q[0:PN-1][$];
 
         int unsigned w_ptr = 0;
         int unsigned t_ptr = 0;
-
         int unsigned beat_count = 0;
 
         forever begin
             @(posedge clk iff (!rst && valid_in));
 
             x_q.push_back(x);
+
             for (int n = 0; n < PN; n++) begin
                 if (np_active[n]) begin
                     w_q[n].push_back(w_bram_data[n][w_ptr]);
-                    w_ptr++;
                 end
             end
-            w_ptr++;
 
+            w_ptr = (w_ptr + 1) % (DEPTH*4);
             beat_count++;
 
             if (beat_count == NUM_BEATS_PER_NEURON) begin
                 for (int n = 0; n < PN; n++) begin
                     if (np_active[n]) begin
-                        txn.w_beats[n] = w_q[n];
-                        txn.threshold[n] = t_bram_data[n][t_ptr % DEPTH];
+                        txn.w_beats[n]   = w_q[n];
+                        txn.threshold[n] = t_bram_data[n][t_ptr];
                     end
                 end
+
                 txn.x_beats = x_q;
                 scoreboard_input_mailbox.put(txn);
-                t_ptr++;
+
+                t_ptr = (t_ptr + 1) % (DEPTH*4);
                 x_q = {};
                 for (int n = 0; n < PN; n++) w_q[n] = {};
                 beat_count = 0;
-                w_ptr = 0;
             end
         end
     end
