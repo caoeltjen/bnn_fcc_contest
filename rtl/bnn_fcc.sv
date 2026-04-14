@@ -641,10 +641,6 @@ module bnn_fcc #(
 
             if(cfg_header_out_valid) begin
 
-                active_layer_id <= cfg_desc_layer_id; // latch active layer
-                active_is_weight <= cfg_desc_is_weight; // latch whether its weight or threshold
-                cfg_words_remaining <= cfg_desc_total_words;
-
                 cfg_addr_count <= '0; // reset address count
 
                 l0_w_np_count <= '0; // reset neuron processor counters
