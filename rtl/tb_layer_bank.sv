@@ -40,7 +40,7 @@ module tb_layer_bank #(
 
     int passed, failed;
 
-    logic [63:0] w_bram_data [0:PN-1][0:DEPTH-1];
+    logic [15:0] w_bram_data [0:PN-1][0:DEPTH*4-1];
     logic [PW-1:0] t_bram_data [0:PN-1][0:DEPTH-1];
 
     mailbox scoreboard_input_mailbox = new;
@@ -181,7 +181,7 @@ module tb_layer_bank #(
     // end
 
     initial begin : load_bram_data
-        int unsigned depth = (1 << ADDR_W);
+        int unsigned depth = DEPTH;
 
         @(posedge clk iff !rst);
 
@@ -198,7 +198,10 @@ module tb_layer_bank #(
                 cfg_w_addr     <= addr;
                 cfg_w_data     <= w_data;
 
-                w_bram_data[neuron][addr] = w_data;
+                w_bram_data[neuron][addr*4 + 0] = w_data[15:0];
+                w_bram_data[neuron][addr*4 + 1] = w_data[31:16];
+                w_bram_data[neuron][addr*4 + 2] = w_data[47:32];
+                w_bram_data[neuron][addr*4 + 3] = w_data[63:48];
 
                 cfg_t_we_np <= '0;
 
@@ -288,19 +291,8 @@ module tb_layer_bank #(
             x_q.push_back(x);
             for (int n = 0; n < PN; n++) begin
                 if (np_active[n]) begin
-                    logic [63:0] w_word;
-                    logic [PW-1:0] w_slice;
-
-                    w_word = w_bram_data[n][(w_ptr >> 2) % DEPTH];
-
-                    case (w_ptr[1:0])
-                        2'd0: w_slice = w_word[15:0];
-                        2'd1: w_slice = w_word[31:16];
-                        2'd2: w_slice = w_word[47:32];
-                        2'd3: w_slice = w_word[63:48];
-                    endcase
-
-                    w_q[n].push_back(w_slice);
+                    w_q[n].push_back(w_bram_data[n][w_ptr]);
+                    w_ptr++;
                 end
             end
             w_ptr++;
