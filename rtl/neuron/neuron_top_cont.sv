@@ -1,5 +1,5 @@
 module neuron_top_cont # (
-    parameter int PW = 8,
+    parameter int PW = 16,
     parameter int ADDR_W = 11,
     parameter int INPUTS_PER_NEURON = 784
 )(
@@ -20,6 +20,23 @@ module neuron_top_cont # (
 
     localparam int NUM_BEATS_PER_NEURON = (INPUTS_PER_NEURON + PW - 1) / PW;
     localparam int BEAT_CNT_W = (NUM_BEATS_PER_NEURON <= 1) ? 1 : $clog2(NUM_BEATS_PER_NEURON);
+
+    localparam int PACK_W = 64;
+
+    localparam int USEFUL_READ_BEATS =
+    (INPUTS_PER_NEURON + PW - 1) / PW;
+
+    localparam int WORDS_PER_NEURON_64 =
+        (INPUTS_PER_NEURON + PACK_W - 1) / PACK_W;
+
+    localparam int READS_PER_PACKED_WORD =
+        PACK_W / PW;
+
+    localparam int STORED_READ_BEATS =
+        WORDS_PER_NEURON_64 * READS_PER_PACKED_WORD;
+
+    localparam int PAD_READ_BEATS =
+        STORED_READ_BEATS - USEFUL_READ_BEATS;
 
     logic first_read_happened;
     logic [BEAT_CNT_W-1:0] beat_count;
@@ -50,9 +67,10 @@ module neuron_top_cont # (
                 w_read_en <= 1'b1;
                 w_read_addr <= w_read_addr + 1;
                 beat_count <= beat_count + 1;
-                if(beat_count == NUM_BEATS_PER_NEURON - 1) begin
+                if(beat_count == USEFUL_READ_BEATS - 1) begin
                     thres_read_addr <= thres_read_addr + 1;
                     beat_count <= '0;
+                    w_read_addr <= w_read_addr + 1 + PAD_READ_BEATS;
                 end
             end
         end

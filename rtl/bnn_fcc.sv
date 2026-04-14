@@ -11,7 +11,7 @@ module bnn_fcc #(
     parameter int PARALLEL_INPUTS = 16,
     parameter int PARALLEL_NEURONS[TOTAL_LAYERS-1] = '{default: 8},
 
-    parameter int ADDR_W = 10
+    parameter int ADDR_W = 11
 ) (
     input logic clk,
     input logic rst,
@@ -135,12 +135,16 @@ module bnn_fcc #(
 //------------------------------------------------------------------------------
 
     localparam int PN0 = PARALLEL_NEURONS[0];
+    localparam int PW = PARALLEL_INPUTS;
 
-    logic l0_cfg_we; //write enable for layer 0 brams
-    logic l0_cfg_is_weight; // 0=weight, 1=threshold
-    logic [$clog2(PN0)-1:0] l0_cfg_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
-    logic [ADDR_W-1:0] l0_cfg_addr; // address for the bram we are writing to
-    logic [PARALLEL_INPUTS-1:0] l0_cfg_data; // weights/thresholds being written to bram
+    logic l0_cfg_w_we; //write enable for layer 0 brams
+    logic [$clog2(PN0)-1:0] l0_cfg_w_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
+    logic [8:0] l0_cfg_w_addr; // address for the bram we are writing to
+    logic [63:0] l0_cfg_w_data; // weights/thresholds being written to bram
+
+    logic [PN0-1:0] l0_cfg_t_we_np; // write enable for layer 0 threshold brams, one per neuron processor
+    logic [PN0-1:0][ADDR_W-1:0] l0_cfg_t_addr_np; // address for layer 0 threshold brams, one per neuron processor
+    logic [PN0-1:0][PW-1:0] l0_cfg_t_data_np; // threshold data for layer 0, one per neuron processor
 
     logic [PN0-1:0] l0_y; // output of layer 0 neuron processors for each processor
     logic [PN0-1:0][PARALLEL_INPUTS-1:0] l0_popcount; // packed signal of popcount results for each neuron processor. 
@@ -163,15 +167,18 @@ module bnn_fcc #(
     ) layer0_bank_inst (
         .rst(rst),
         .clk(clk),
-
         .x(layer0_x),
         .valid_in(layer0_valid_in),
-        .np_active('1), // have them all active for now. we can change this when we get into real design stuff
-        .cfg_we(l0_cfg_we),
-        .cfg_is_weight(l0_cfg_is_weight),
-        .cfg_np_sel(l0_cfg_np_sel),
-        .cfg_addr(l0_cfg_addr),
-        .cfg_data(l0_cfg_data),
+        .np_active('1),
+
+        .cfg_w_we(l0_cfg_w_we),
+        .cfg_w_np_sel(l0_cfg_w_np_sel),
+        .cfg_w_addr(l0_cfg_w_addr),
+        .cfg_w_data(l0_cfg_w_data),
+
+        .cfg_t_we_np(l0_cfg_t_we_np),
+        .cfg_t_addr_np(l0_cfg_t_addr_np),
+        .cfg_t_data_np(l0_cfg_t_data_np),
 
         .y(l0_y),
         .popcount(l0_popcount),
@@ -184,22 +191,28 @@ module bnn_fcc #(
 
     localparam int PN1 = PARALLEL_NEURONS[1];
 
-    logic l1_cfg_we; // write enable for config to layer 1 brams
-    logic l1_cfg_is_weight; // 0=weight, 1=threshold
-    logic [$clog2(PN1)-1:0] l1_cfg_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
-    logic [ADDR_W-1:0] l1_cfg_addr; // address for the bram we are writing to
-    logic [PARALLEL_INPUTS-1:0] l1_cfg_data; // weights/thresholds being written to bram
+    logic l1_cfg_w_we; //write enable for layer 1 brams
+    logic [$clog2(PN1)-1:0] l1_cfg_w_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
+    logic [8:0] l1_cfg_w_addr; // address for the bram we are writing to
+    logic [63:0] l1_cfg_w_data; // weights/thresholds being written to bram
+
+    logic [PN1-1:0] l1_cfg_t_we_np; // write enable for layer 1 threshold brams, one per neuron processor
+    logic [PN1-1:0][ADDR_W-1:0] l1_cfg_t_addr_np; // address for layer 1 threshold brams, one per neuron processor
+    logic [PN1-1:0][PW-1:0] l1_cfg_t_data_np; // threshold data for layer 1, one per neuron processor
 
     logic [PN1-1:0] l1_y; // output of layer 1 neuron processors for each processor
     logic [PN1-1:0][PARALLEL_INPUTS-1:0] l1_popcount; // packed signal of popcount results for each neuron processor. 
-    logic [PN1-1:0] l1_valid_out;
+    logic [PN1-1:0] l1_valid_out; // valid
 
-    logic [PARALLEL_INPUTS-1:0] layer1_x; // img data input
-    logic layer1_valid_in;
+    logic [PARALLEL_INPUTS-1:0] layer1_x; // image data
+    logic layer1_valid_in; // valid
 
-    // questions
-        // how does it take inputs from layer 0? anything to handle backstream for the streaming of data?
-        // pipelined?
+    // questions:
+        // how many neurons are being instantiated?
+        // how is data being streamed to all the neurons?
+        // is this pipelined or sequential for solving the popcount of all pixels in img for all the neurons instantiated?
+        // how are the weights and thresholds being stored/streamed to the neurons? 
+        // if there's waveform examples of how layer bank works, please show so i can visualize better
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN1),
@@ -208,15 +221,18 @@ module bnn_fcc #(
     ) layer1_bank_inst (
         .rst(rst),
         .clk(clk),
-
         .x(layer1_x),
         .valid_in(layer1_valid_in),
-        .np_active('1), // have them all active for now. we can change this when we get into real design stuff
-        .cfg_we(l1_cfg_we),
-        .cfg_is_weight(l1_cfg_is_weight),
-        .cfg_np_sel(l1_cfg_np_sel),
-        .cfg_addr(l1_cfg_addr),
-        .cfg_data(l1_cfg_data),
+        .np_active('1),
+
+        .cfg_w_we(l1_cfg_w_we),
+        .cfg_w_np_sel(l1_cfg_w_np_sel),
+        .cfg_w_addr(l1_cfg_w_addr),
+        .cfg_w_data(l1_cfg_w_data),
+
+        .cfg_t_we_np(l1_cfg_t_we_np),
+        .cfg_t_addr_np(l1_cfg_t_addr_np),
+        .cfg_t_data_np(l1_cfg_t_data_np),
 
         .y(l1_y),
         .popcount(l1_popcount),
@@ -229,23 +245,28 @@ module bnn_fcc #(
 
     localparam int PN2 = PARALLEL_NEURONS[2];
 
-    logic l2_cfg_we;
-    logic l2_cfg_is_weight;
-    logic [$clog2(PN2)-1:0] l2_cfg_np_sel;
-    logic [ADDR_W-1:0] l2_cfg_addr;
-    logic [PARALLEL_INPUTS-1:0] l2_cfg_data;
+    logic l2_cfg_w_we; //write enable for layer 2 brams
+    logic [$clog2(PN2)-1:0] l2_cfg_w_np_sel; // select signal to choose which neuron processor to write to (if we have multiple)
+    logic [8:0] l2_cfg_w_addr; // address for the bram we are writing to
+    logic [63:0] l2_cfg_w_data; // weights/thresholds being written to bram
 
-    logic [PN2-1:0] l2_y;
-    logic [PN2-1:0][PARALLEL_INPUTS-1:0] l2_popcount;
-    logic [PN2-1:0] l2_valid_out;
+    logic [PN2-1:0] l2_cfg_t_we_np; // write enable for layer 2 threshold brams, one per neuron processor
+    logic [PN2-1:0][ADDR_W-1:0] l2_cfg_t_addr_np; // address for layer 2 threshold brams, one per neuron processor
+    logic [PN2-1:0][PW-1:0] l2_cfg_t_data_np; // threshold data for layer 2, one per neuron processor
 
-    logic [PARALLEL_INPUTS-1:0] layer2_x;
-    logic layer2_valid_in;
+    logic [PN2-1:0] l2_y; // output of layer 2 neuron processors for each processor
+    logic [PN2-1:0][PARALLEL_INPUTS-1:0] l2_popcount; // packed signal of popcount results for each neuron processor. 
+    logic [PN2-1:0] l2_valid_out; // valid
 
-    // questions
-        // ditto for the previous layers
-        // how is output being asserted?
-        // how is addressing and writing to brams being handled?
+    logic [PARALLEL_INPUTS-1:0] layer2_x; // image data
+    logic layer2_valid_in; // valid
+
+    // questions:
+        // how many neurons are being instantiated?
+        // how is data being streamed to all the neurons?
+        // is this pipelined or sequential for solving the popcount of all pixels in img for all the neurons instantiated?
+        // how are the weights and thresholds being stored/streamed to the neurons? 
+        // if there's waveform examples of how layer bank works, please show so i can visualize better
     layer_bank #(
         .PW(PARALLEL_INPUTS),
         .PN(PN2),
@@ -254,15 +275,18 @@ module bnn_fcc #(
     ) layer2_bank_inst (
         .rst(rst),
         .clk(clk),
-
         .x(layer2_x),
         .valid_in(layer2_valid_in),
-        .np_active('1), // have them all active for now. we can change this when we get into real design stuff
-        .cfg_we(l2_cfg_we),
-        .cfg_is_weight(l2_cfg_is_weight),
-        .cfg_np_sel(l2_cfg_np_sel),
-        .cfg_addr(l2_cfg_addr),
-        .cfg_data(l2_cfg_data),
+        .np_active('1),
+
+        .cfg_w_we(l2_cfg_w_we),
+        .cfg_w_np_sel(l2_cfg_w_np_sel),
+        .cfg_w_addr(l2_cfg_w_addr),
+        .cfg_w_data(l2_cfg_w_data),
+
+        .cfg_t_we_np(l2_cfg_t_we_np),
+        .cfg_t_addr_np(l2_cfg_t_addr_np),
+        .cfg_t_data_np(l2_cfg_t_data_np),
 
         .y(l2_y),
         .popcount(l2_popcount),
@@ -533,97 +557,70 @@ module bnn_fcc #(
 // Parse Config Manager and Write to BRAMS
 //------------------------------------------------------------------------------
 
-    logic [7:0] cfg_desc_layer_id;
-    logic cfg_desc_is_weight;
-    logic [31:0] cfg_desc_total_words;
-    logic cfg_desc_valid;
-    logic cfg_desc_ready;
-
-    logic cfg_msg_active;
-    logic [7:0] active_layer_id;
-    logic active_is_weight;
-    logic [31:0] cfg_words_remaining;
-
-    config_desc_fifo #(
-        .FIFO_DEPTH(8)
-    ) config_desc_fifo_inst (
-        .clk(clk),
-        .rst(rst),
-
-        .layer_id_in(cfg_header_out.layer_id),
-        .is_weight_in(cfg_header_out.msg_type == 0), // assuming msg_type 0 is weight and 1 is threshold
-        .total_words_in(cfg_header_out.total_bytes >> 1),
-        .push(cfg_header_out_valid),
-
-        .layer_id_out(cfg_desc_layer_id),
-        .is_weight_out(cfg_desc_is_weight),
-        .total_words_out(cfg_desc_total_words),
-        .valid_out(cfg_desc_valid),
-        .ready_in(cfg_desc_ready)
-    );
-
-    logic [PARALLEL_INPUTS-1:0] cfg_data;
-    logic cfg_word_valid;
-
-    config_word_fifo #(
-        .CONFIG_BUS_WIDTH(64),
-        .FIFO_DEPTH(128)
-    ) config_word_fifo_inst (
-        .clk(clk),
-        .rst(rst),
-
-        .data_in(cfg_payload_bytes),
-        .data_valid_in(cfg_payload_valid),
-
-        .data_out(cfg_data),
-        .data_out_valid(cfg_word_valid),
-        .data_out_ready(cfg_msg_active)
-    );
-
     localparam int LAYER0 = 8'd0;
     localparam int LAYER1 = 8'd1;
     localparam int LAYER2 = 8'd2;
 
+    localparam int L0_WORDS_PER_NEURON = (TOPOLOGY[0] + 63) / 64;
+    localparam int L1_WORDS_PER_NEURON = (TOPOLOGY[1] + 63) / 64;
+    localparam int L2_WORDS_PER_NEURON = (TOPOLOGY[2] + 63) / 64;
+
+    logic [$clog2(PN0)-1:0] l0_w_np_count;
+    logic [$clog2(PN1)-1:0] l1_w_np_count;
+    logic [$clog2(PN2)-1:0] l2_w_np_count;
+
+    logic [$clog2(L0_WORDS_PER_NEURON+1)-1:0] l0_weight_counter;
+    logic [$clog2(L1_WORDS_PER_NEURON+1)-1:0] l1_weight_counter;
+    logic [$clog2(L2_WORDS_PER_NEURON+1)-1:0] l2_weight_counter;
+
+    logic [3:0] active_layer_id;
+    logic active_is_weight;
+
+    logic t_upper_half;
+
+    logic [31:0] weight_iter;
+
     logic [ADDR_W-1:0] cfg_addr_count;
-    logic [31:0] weight_iter; // can parameterize this if we want to just didnt feel like doing the math
-
-    logic [$clog2(PN0)-1:0] l0_np_count;
-    logic [$clog2(PN1)-1:0] l1_np_count;
-    logic [$clog2(PN2)-1:0] l2_np_count;
-
-    logic [$clog2(TOPOLOGY[0] / PARALLEL_INPUTS)-1:0] l0_weight_counter;
-    logic [$clog2(TOPOLOGY[1] / PARALLEL_INPUTS)-1:0] l1_weight_counter;
-    logic [$clog2(TOPOLOGY[2] / PARALLEL_INPUTS)-1:0] l2_weight_counter;
-
-    assign cfg_desc_ready = !cfg_msg_active;
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
-            l0_cfg_we <= 1'b0;
-            l0_cfg_is_weight <= 1'b0;
-            l0_cfg_np_sel <= '0;
-            l0_cfg_addr <= '0;
-            l0_cfg_data <= '0;
+            l0_cfg_w_we <= 1'b0; 
+            l0_cfg_w_np_sel <= '0; 
+            l0_cfg_w_addr <= '0; 
+            l0_cfg_w_data <= '0; 
 
-            l1_cfg_we <= 1'b0;
-            l1_cfg_is_weight <= 1'b0;
-            l1_cfg_np_sel <= '0;
-            l1_cfg_addr <= '0;
-            l1_cfg_data <= '0;
+            l0_cfg_t_we_np <= '0;
+            l0_cfg_t_addr_np <= '0;
+            l0_cfg_t_data_np <= '0;
 
-            l2_cfg_we <= 1'b0;
-            l2_cfg_is_weight <= 1'b0;
-            l2_cfg_np_sel <= '0;
-            l2_cfg_addr <= '0;
-            l2_cfg_data <= '0;
+
+            l1_cfg_w_we <= 1'b0; 
+            l1_cfg_w_np_sel <= '0; 
+            l1_cfg_w_addr <= '0; 
+            l1_cfg_w_data <= '0; 
+
+            l1_cfg_t_we_np <= '0;
+            l1_cfg_t_addr_np <= '0;
+            l1_cfg_t_data_np <= '0;
+
+
+            l2_cfg_w_we <= 1'b0; 
+            l2_cfg_w_np_sel <= '0; 
+            l2_cfg_w_addr <= '0; 
+            l2_cfg_w_data <= '0; 
+
+            l2_cfg_t_we_np <= '0;
+            l2_cfg_t_addr_np <= '0;
+            l2_cfg_t_data_np <= '0;
+
 
             active_layer_id <= '0;
             active_is_weight <= 1'b0;
             cfg_addr_count <= '0;
 
-            l0_np_count <= '0;
-            l1_np_count <= '0;
-            l2_np_count <= '0;
+            l0_w_np_count <= '0;
+            l1_w_np_count <= '0;
+            l2_w_np_count <= '0;
 
             l0_weight_counter <= '0;
             l1_weight_counter <= '0;
@@ -631,16 +628,18 @@ module bnn_fcc #(
 
             weight_iter <= '0;
 
-            cfg_msg_active <= 1'b0;
-            cfg_words_remaining <= '0;
+            t_upper_half <= 1'b0;
         end
         else begin
-            l0_cfg_we <= 1'b0; // set all write enables to 0 by default
-            l1_cfg_we <= 1'b0;
-            l2_cfg_we <= 1'b0;
+            l0_cfg_w_we <= 1'b0; // set all write enables to 0 by default
+            l1_cfg_w_we <= 1'b0;
+            l2_cfg_w_we <= 1'b0;
 
-            if(!cfg_msg_active && cfg_desc_valid) begin
-                cfg_msg_active <= 1'b1; // set message active when we get a valid config description
+            l0_cfg_t_we_np <= '0;
+            l1_cfg_t_we_np <= '0;
+            l2_cfg_t_we_np <= '0;
+
+            if(cfg_header_out_valid) begin
 
                 active_layer_id <= cfg_desc_layer_id; // latch active layer
                 active_is_weight <= cfg_desc_is_weight; // latch whether its weight or threshold
@@ -648,122 +647,264 @@ module bnn_fcc #(
 
                 cfg_addr_count <= '0; // reset address count
 
-                l0_np_count <= '0; // reset neuron processor counters
-                l1_np_count <= '0;
-                l2_np_count <= '0;
+                l0_w_np_count <= '0; // reset neuron processor counters
+                l1_w_np_count <= '0;
+                l2_w_np_count <= '0;
 
                 l0_weight_counter <= '0;
                 l1_weight_counter <= '0;
                 l2_weight_counter <= '0;
 
-                weight_iter <= '0;
+                weight_iter <= '0; // reset weight iteration counter
+
+                t_upper_half <= 1'b0; // reset threshold upper half flag
             end
 
-            // TODO: i need to pack these like actually. We need like a small buffer to put together 1,0 3,2 5,4 7,6 yktv
-            if(cfg_word_valid && cfg_msg_active) begin // make sure 16 bits ready to write
+            if(&cfg_payload_valid) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
-                    l0_cfg_we <= 1'b1;
-                    l0_cfg_is_weight <= active_is_weight;
-                    l0_cfg_addr <= cfg_addr_count;
-                    l0_cfg_data <= cfg_data; // data from fifo
-                    l0_cfg_np_sel <= l0_np_count;
                     if(active_is_weight) begin // if we are writing weights
+                        l0_cfg_w_np_sel <= l0_w_np_count;
+                        l0_cfg_w_addr <= cfg_addr_count;
+                        l0_cfg_w_we <= 1'b1;
+                        l0_cfg_w_data <= {
+                            cfg_payload_bytes[7],
+                            cfg_payload_bytes[6],
+                            cfg_payload_bytes[5],
+                            cfg_payload_bytes[4],
+                            cfg_payload_bytes[3],
+                            cfg_payload_bytes[2],
+                            cfg_payload_bytes[1],
+                            cfg_payload_bytes[0]
+                        };
+
                         l0_weight_counter <= l0_weight_counter + 1; // we increment the amount of weights we have written
                         cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
 
-                        if(l0_weight_counter == TOPOLOGY[0] / PARALLEL_INPUTS - 1) begin ///for every neuron worth of weights we write
-                            l0_np_count <= l0_np_count + 1; // we move to the next neuron processor
-                            cfg_addr_count <= weight_iter * (TOPOLOGY[0] / PARALLEL_INPUTS); // we reset the address to start from 0 on the next neuron processor's bram
+                        if(l0_weight_counter == L0_WORDS_PER_NEURON-1) begin // for every neuron worth of weights we write (last bit 16 bits padded with an extra 48)
+                            l0_w_np_count <= l0_w_np_count + 1; // we move to the next neuron processor
+                            cfg_addr_count <= weight_iter * L0_WORDS_PER_NEURON; // we reset the address to start from 0 on the next neuron processor's bram
                             l0_weight_counter <= '0; // we reset the weight counter as well
 
-                            if(l0_np_count == PN0 - 1) begin // if we are on the last neuron processor and writing the last weight
-                                l0_np_count <= '0; // next cycle put the select back to the first neuron
+                            if(l0_w_np_count == PN0 - 1) begin // if we are on the last neuron processor and writing the last weight
+                                l0_w_np_count <= '0; // next cycle put the select back to the first neuron
                                 weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
-                                cfg_addr_count <= (weight_iter + 1'b1) * (TOPOLOGY[0] / PARALLEL_INPUTS); // we move the address count to the next set of weights for the next iteration
+                                cfg_addr_count <= (weight_iter + 1'b1) * L0_WORDS_PER_NEURON; // we move the address count to the next set of weights for the next iteration
                             end
                         end
                     end
 
                     else if(!active_is_weight) begin
-                        l0_np_count <= l0_np_count + 1; // increment the select signal
+                        logic [15:0] t0, t1, t2, t3;
 
-                        if(l0_np_count == PN0 - 1) begin // if the select signal is at the last neuron
-                            l0_np_count <= '0; // next cycle put the select back to the first neuron
-                            cfg_addr_count <= cfg_addr_count + 1; // increment the address
+                        t0 = {cfg_payload_bytes[1], cfg_payload_bytes[0]};
+                        t1 = {cfg_payload_bytes[3], cfg_payload_bytes[2]};
+                        t2 = {cfg_payload_bytes[5], cfg_payload_bytes[4]};
+                        t3 = {cfg_payload_bytes[7], cfg_payload_bytes[6]};
+
+                        if (!t_upper_half) begin
+                            // first 4 thresholds go to neuron processors 0,1,2,3
+                            l0_cfg_t_we_np[0]   <= 1'b1;
+                            l0_cfg_t_we_np[1]   <= 1'b1;
+                            l0_cfg_t_we_np[2]   <= 1'b1;
+                            l0_cfg_t_we_np[3]   <= 1'b1;
+
+                            l0_cfg_t_addr_np[0] <= cfg_addr_count;
+                            l0_cfg_t_addr_np[1] <= cfg_addr_count;
+                            l0_cfg_t_addr_np[2] <= cfg_addr_count;
+                            l0_cfg_t_addr_np[3] <= cfg_addr_count;
+
+                            l0_cfg_t_data_np[0] <= t0;
+                            l0_cfg_t_data_np[1] <= t1;
+                            l0_cfg_t_data_np[2] <= t2;
+                            l0_cfg_t_data_np[3] <= t3;
+
+                            t_upper_half <= 1'b1;
+                        end
+                        else begin
+                            // next 4 thresholds go to neuron processors 4,5,6,7
+                            l0_cfg_t_we_np[4]   <= 1'b1;
+                            l0_cfg_t_we_np[5]   <= 1'b1;
+                            l0_cfg_t_we_np[6]   <= 1'b1;
+                            l0_cfg_t_we_np[7]   <= 1'b1;
+
+                            l0_cfg_t_addr_np[4] <= cfg_addr_count;
+                            l0_cfg_t_addr_np[5] <= cfg_addr_count;
+                            l0_cfg_t_addr_np[6] <= cfg_addr_count;
+                            l0_cfg_t_addr_np[7] <= cfg_addr_count;
+
+                            l0_cfg_t_data_np[4] <= t0;
+                            l0_cfg_t_data_np[5] <= t1;
+                            l0_cfg_t_data_np[6] <= t2;
+                            l0_cfg_t_data_np[7] <= t3;
+
+                            t_upper_half <= 1'b0;
+                            cfg_addr_count  <= cfg_addr_count + 1'b1;
                         end
                     end
                 end
 
                 if(active_layer_id == LAYER1) begin
-                    l1_cfg_we <= 1'b1;
-                    l1_cfg_is_weight <= active_is_weight;
-                    l1_cfg_addr <= cfg_addr_count;
-                    l1_cfg_data <= cfg_data; // data from fifo
-                    l1_cfg_np_sel <= l1_np_count;
-
                     if(active_is_weight) begin // if we are writing weights
+                        l1_cfg_w_np_sel <= l1_w_np_count;
+                        l1_cfg_w_addr <= cfg_addr_count;
+                        l1_cfg_w_we <= 1'b1;
+                        l1_cfg_w_data <= {
+                            cfg_payload_bytes[7],
+                            cfg_payload_bytes[6],
+                            cfg_payload_bytes[5],
+                            cfg_payload_bytes[4],
+                            cfg_payload_bytes[3],
+                            cfg_payload_bytes[2],
+                            cfg_payload_bytes[1],
+                            cfg_payload_bytes[0]
+                        };
+
                         l1_weight_counter <= l1_weight_counter + 1; // we increment the amount of weights we have written
                         cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
 
-                        if(l1_weight_counter == TOPOLOGY[1] / PARALLEL_INPUTS - 1) begin ///for every neuron worth of weights we write
-                            l1_np_count <= l1_np_count + 1; // we move to the next neuron processor
-                            cfg_addr_count <= weight_iter * (TOPOLOGY[1] / PARALLEL_INPUTS); // we reset the address to start from 0 on the next neuron processor's bram
+                        if(l1_weight_counter == L1_WORDS_PER_NEURON-1) begin // for every neuron worth of weights we write (last bit 16 bits padded with an extra 48)
+                            l1_w_np_count <= l1_w_np_count + 1; // we move to the next neuron processor
+                            cfg_addr_count <= weight_iter * L1_WORDS_PER_NEURON; // we reset the address to start from 0 on the next neuron processor's bram
                             l1_weight_counter <= '0; // we reset the weight counter as well
 
-                            if(l1_np_count == PN1 - 1) begin // if we are on the last neuron processor and writing the last weight
-                                l1_np_count <= '0; // next cycle put the select back to the first neuron
+                            if(l1_w_np_count == PN1 - 1) begin // if we are on the last neuron processor and writing the last weight
+                                l1_w_np_count <= '0; // next cycle put the select back to the first neuron
                                 weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
-                                cfg_addr_count <= (weight_iter + 1'b1) * (TOPOLOGY[1] / PARALLEL_INPUTS); // we move the address count to the next set of weights for the next iteration
+                                cfg_addr_count <= (weight_iter + 1'b1) * L1_WORDS_PER_NEURON; // we move the address count to the next set of weights for the next iteration
                             end
                         end
                     end
 
                     else if(!active_is_weight) begin
-                        l1_np_count <= l1_np_count + 1; // increment the select signal
+                        logic [15:0] t0, t1, t2, t3;
 
-                        if(l1_np_count == PN1 - 1) begin // if the select signal is at the last neuron
-                            l1_np_count <= '0; // next cycle put the select back to the first neuron
-                            cfg_addr_count <= cfg_addr_count + 1; // increment the address
+                        t0 = {cfg_payload_bytes[1], cfg_payload_bytes[0]};
+                        t1 = {cfg_payload_bytes[3], cfg_payload_bytes[2]};
+                        t2 = {cfg_payload_bytes[5], cfg_payload_bytes[4]};
+                        t3 = {cfg_payload_bytes[7], cfg_payload_bytes[6]};
+
+                        if (!t_upper_half) begin
+                            // first 4 thresholds go to neuron processors 0,1,2,3
+                            l1_cfg_t_we_np[0]   <= 1'b1;
+                            l1_cfg_t_we_np[1]   <= 1'b1;
+                            l1_cfg_t_we_np[2]   <= 1'b1;
+                            l1_cfg_t_we_np[3]   <= 1'b1;
+
+                            l1_cfg_t_addr_np[0] <= cfg_addr_count;
+                            l1_cfg_t_addr_np[1] <= cfg_addr_count;
+                            l1_cfg_t_addr_np[2] <= cfg_addr_count;
+                            l1_cfg_t_addr_np[3] <= cfg_addr_count;
+
+                            l1_cfg_t_data_np[0] <= t0;
+                            l1_cfg_t_data_np[1] <= t1;
+                            l1_cfg_t_data_np[2] <= t2;
+                            l1_cfg_t_data_np[3] <= t3;
+
+                            t_upper_half <= 1'b1;
+                        end
+                        else begin
+                            // next 4 thresholds go to neuron processors 4,5,6,7
+                            l1_cfg_t_we_np[4]   <= 1'b1;
+                            l1_cfg_t_we_np[5]   <= 1'b1;
+                            l1_cfg_t_we_np[6]   <= 1'b1;
+                            l1_cfg_t_we_np[7]   <= 1'b1;
+
+                            l1_cfg_t_addr_np[4] <= cfg_addr_count;
+                            l1_cfg_t_addr_np[5] <= cfg_addr_count;
+                            l1_cfg_t_addr_np[6] <= cfg_addr_count;
+                            l1_cfg_t_addr_np[7] <= cfg_addr_count;
+
+                            l1_cfg_t_data_np[4] <= t0;
+                            l1_cfg_t_data_np[5] <= t1;
+                            l1_cfg_t_data_np[6] <= t2;
+                            l1_cfg_t_data_np[7] <= t3;
+
+                            t_upper_half <= 1'b0;
+                            cfg_addr_count  <= cfg_addr_count + 1'b1;
                         end
                     end
                 end
 
                 if(active_layer_id == LAYER2) begin
-                    l2_cfg_we <= 1'b1;
-                    l2_cfg_is_weight <= active_is_weight;
-                    l2_cfg_addr <= cfg_addr_count;
-                    l2_cfg_data <= cfg_data; // data from fifo
-                    l2_cfg_np_sel <= l2_np_count;
+                    if(active_is_weight) begin
+                        l2_cfg_w_np_sel <= l2_w_np_count;
+                        l2_cfg_w_addr <= cfg_addr_count;
+                        l2_cfg_w_we <= 1'b1;
+                        l2_cfg_w_data <= {
+                            cfg_payload_bytes[7],
+                            cfg_payload_bytes[6],
+                            cfg_payload_bytes[5],
+                            cfg_payload_bytes[4],
+                            cfg_payload_bytes[3],
+                            cfg_payload_bytes[2],
+                            cfg_payload_bytes[1],
+                            cfg_payload_bytes[0]
+                        };
 
-                    if(active_is_weight) begin // if we are writing weights
                         l2_weight_counter <= l2_weight_counter + 1; // we increment the amount of weights we have written
                         cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
 
-                        if(l2_weight_counter == TOPOLOGY[2] / PARALLEL_INPUTS - 1) begin ///for every neuron worth of weights we write
-                            l2_np_count <= l2_np_count + 1; // we move to the next neuron processor
-                            cfg_addr_count <= weight_iter * (TOPOLOGY[2] / PARALLEL_INPUTS); // we reset the address to start from 0 on the next neuron processor's bram
+                        if(l2_weight_counter == L2_WORDS_PER_NEURON-1) begin // for every neuron worth of weights we write (last bit 16 bits padded with an extra 48)
+                            l2_w_np_count <= l2_w_np_count + 1; // we move to the next neuron processor
+                            cfg_addr_count <= weight_iter * L2_WORDS_PER_NEURON; // we reset the address to start from 0 on the next neuron processor's bram
                             l2_weight_counter <= '0; // we reset the weight counter as well
 
-                            if(l2_np_count == PN2 - 1) begin // if we are on the last neuron processor and writing the last weight
-                                l2_np_count <= '0; // next cycle put the select back to the first neuron
+                            if(l2_w_np_count == PN2 - 1) begin // if we are on the last neuron processor and writing the last weight
+                                l2_w_np_count <= '0; // next cycle put the select back to the first neuron
                                 weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
-                                cfg_addr_count <= (weight_iter + 1'b1) * (TOPOLOGY[2] / PARALLEL_INPUTS); // we move the address count to the next set of weights for the next iteration
+                                cfg_addr_count <= (weight_iter + 1'b1) * L2_WORDS_PER_NEURON; // we move the address count to the next set of weights for the next iteration
                             end
                         end
                     end
 
                     else if(!active_is_weight) begin
-                        l2_np_count <= l2_np_count + 1; // increment the select signal
+                        logic [15:0] t0, t1, t2, t3;
 
-                        if(l2_np_count == PN2 - 1) begin // if the select signal is at the last neuron
-                            l2_np_count <= '0; // next cycle put the select back to the first neuron
-                            cfg_addr_count <= cfg_addr_count + 1; // increment the address
+                        t0 = {cfg_payload_bytes[1], cfg_payload_bytes[0]};
+                        t1 = {cfg_payload_bytes[3], cfg_payload_bytes[2]};
+                        t2 = {cfg_payload_bytes[5], cfg_payload_bytes[4]};
+                        t3 = {cfg_payload_bytes[7], cfg_payload_bytes[6]};
+
+                        if (!t_upper_half) begin
+                            // first 4 thresholds go to neuron processors 0,1,2,3
+                            l2_cfg_t_we_np[0]   <= 1'b1;
+                            l2_cfg_t_we_np[1]   <= 1'b1;
+                            l2_cfg_t_we_np[2]   <= 1'b1;
+                            l2_cfg_t_we_np[3]   <= 1'b1;
+
+                            l2_cfg_t_addr_np[0] <= cfg_addr_count;
+                            l2_cfg_t_addr_np[1] <= cfg_addr_count;
+                            l2_cfg_t_addr_np[2] <= cfg_addr_count;
+                            l2_cfg_t_addr_np[3] <= cfg_addr_count;
+
+                            l2_cfg_t_data_np[0] <= t0;
+                            l2_cfg_t_data_np[1] <= t1;
+                            l2_cfg_t_data_np[2] <= t2;
+                            l2_cfg_t_data_np[3] <= t3;
+
+                            t_upper_half <= 1'b1;
+                        end
+                        else begin
+                            // next 4 thresholds go to neuron processors 4,5,6,7
+                            l2_cfg_t_we_np[4]   <= 1'b1;
+                            l2_cfg_t_we_np[5]   <= 1'b1;
+                            l2_cfg_t_we_np[6]   <= 1'b1;
+                            l2_cfg_t_we_np[7]   <= 1'b1;
+
+                            l2_cfg_t_addr_np[4] <= cfg_addr_count;
+                            l2_cfg_t_addr_np[5] <= cfg_addr_count;
+                            l2_cfg_t_addr_np[6] <= cfg_addr_count;
+                            l2_cfg_t_addr_np[7] <= cfg_addr_count;
+
+                            l2_cfg_t_data_np[4] <= t0;
+                            l2_cfg_t_data_np[5] <= t1;
+                            l2_cfg_t_data_np[6] <= t2;
+                            l2_cfg_t_data_np[7] <= t3;
+
+                            t_upper_half <= 1'b0;
+                            cfg_addr_count  <= cfg_addr_count + 1'b1;
                         end
                     end
-                end
-                cfg_words_remaining <= cfg_words_remaining - 1; // decrement the amount of words remaining in the message
-                if(cfg_words_remaining == 1) begin
-                    cfg_msg_active <= 1'b0; // if this is the last word, set message active to 0 to wait for the next config description
                 end
             end
         end
