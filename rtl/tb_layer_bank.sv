@@ -3,7 +3,7 @@
 module tb_layer_bank #(
     parameter int PW = 16,
     parameter int PN = 4,
-    parameter int ADDR_W = 10,
+    parameter int ADDR_W = 11,
     parameter int INPUTS_PER_NEURON = 256,
     parameter NUM_TESTS = 1000,
     parameter int MIN_BEATS = 1,
@@ -24,11 +24,14 @@ module tb_layer_bank #(
     logic [PW-1:0]          x;
     logic                   valid_in;
 
-    logic                   cfg_we;
-    logic                   cfg_is_weight;
-    logic [$clog2(PN)-1:0]  cfg_np_sel;
-    logic [ADDR_W-1:0]      cfg_addr;
-    logic [PW-1:0]          cfg_data;
+    logic                         cfg_w_we;
+    logic [$clog2(PN)-1:0]        cfg_w_np_sel;
+    logic [8:0]                   cfg_w_addr;
+    logic [63:0]                  cfg_w_data;
+
+    logic [PN-1:0]                cfg_t_we_np;
+    logic [PN-1:0][ADDR_W-1:0]    cfg_t_addr_np;
+    logic [PN-1:0][PW-1:0]        cfg_t_data_np;
 
     logic [PN-1:0]          np_active = '1;
     logic [PN-1:0]          y;
@@ -37,14 +40,14 @@ module tb_layer_bank #(
 
     int passed, failed;
 
-    logic [PW-1:0] w_bram_data [0:PN-1][0:DEPTH-1];
+    logic [63:0] w_bram_data [0:PN-1][0:DEPTH-1];
     logic [PW-1:0] t_bram_data [0:PN-1][0:DEPTH-1];
 
     mailbox scoreboard_input_mailbox = new;
     mailbox scoreboard_output_mailbox = new;
     mailbox driver_mailbox = new;
 
-    layer_bank #(
+    .layer_bank #(
         .PW(PW),
         .PN(PN),
         .ADDR_W(ADDR_W),
@@ -55,11 +58,16 @@ module tb_layer_bank #(
         .x(x),
         .valid_in(valid_in),
         .np_active(np_active),
-        .cfg_we(cfg_we),
-        .cfg_is_weight(cfg_is_weight),
-        .cfg_np_sel(cfg_np_sel),
-        .cfg_addr(cfg_addr),
-        .cfg_data(cfg_data),
+
+        .cfg_w_we(cfg_w_we),
+        .cfg_w_np_sel(cfg_w_np_sel),
+        .cfg_w_addr(cfg_w_addr),
+        .cfg_w_data(cfg_w_data),
+
+        .cfg_t_we_np(cfg_t_we_np),
+        .cfg_t_addr_np(cfg_t_addr_np),
+        .cfg_t_data_np(cfg_t_data_np),
+
         .y(y),
         .popcount(popcount),
         .valid_out(valid_out)
@@ -119,52 +127,108 @@ module tb_layer_bank #(
         x <= '0;
         valid_in <= 1'b0;
 
-        cfg_we <= 1'b0;
-        cfg_is_weight <= 1'b0;
-        cfg_np_sel <= '0;
-        cfg_addr <= '0;
-        cfg_data <= '0;
+        cfg_w_we <= 1'b0;
+        cfg_w_np_sel <= '0;
+        cfg_w_addr <= '0;
+        cfg_w_data <= '0;
+
+        cfg_t_we_np <= '0;
+        cfg_t_addr_np <= '{default:'0};
+        cfg_t_data_np <= '{default:'0};
 
         repeat (5) @(posedge clk);
         @(negedge clk);
         rst <= 1'b0;
     end
 
+    // initial begin : load_bram_data
+    //     int unsigned depth = (1 << ADDR_W);
+
+    //     @(posedge clk iff !rst);
+
+    //     for(int unsigned neuron = 0; neuron < PN; neuron++) begin
+
+    //         //Weight Loading
+    //         for(int unsigned addr = 0; addr < depth; addr++) begin
+    //             logic [PW-1:0] w_data;
+    //             w_data = $urandom;
+    //             cfg_we <= 1'b1;
+    //             cfg_is_weight <= 1'b1;
+    //             cfg_np_sel <= neuron;
+    //             cfg_addr <= addr;
+    //             cfg_data <= w_data;
+    //             w_bram_data[neuron][addr] = w_data;
+    //             @(posedge clk);
+    //         end
+
+    //         //Threshold Loading
+    //         for(int unsigned addr = 0; addr < depth; addr++) begin
+    //             logic [PW-1:0] t_data;
+    //             t_data = $urandom_range(0, 16'h00AA);;
+    //             cfg_we <= 1'b1;
+    //             cfg_is_weight <= 1'b0;
+    //             cfg_np_sel <= neuron;
+    //             cfg_addr <= addr;
+    //             cfg_data <= t_data;
+    //             t_bram_data[neuron][addr] = t_data;
+    //             @(posedge clk);
+    //         end
+    //     end
+
+    //     cfg_we <= 1'b0;
+    //     ram_finished <= 1'b1;
+    //     @(posedge clk);
+    // end
+
     initial begin : load_bram_data
         int unsigned depth = (1 << ADDR_W);
 
         @(posedge clk iff !rst);
 
-        for(int unsigned neuron = 0; neuron < PN; neuron++) begin
+        // ----------------------------
+        // WEIGHTS (64-bit)
+        // ----------------------------
+        for (int unsigned neuron = 0; neuron < PN; neuron++) begin
+            for (int unsigned addr = 0; addr < depth; addr++) begin
+                logic [63:0] w_data;
+                w_data = {$urandom, $urandom}; // full 64-bit
 
-            //Weight Loading
-            for(int unsigned addr = 0; addr < depth; addr++) begin
-                logic [PW-1:0] w_data;
-                w_data = $urandom;
-                cfg_we <= 1'b1;
-                cfg_is_weight <= 1'b1;
-                cfg_np_sel <= neuron;
-                cfg_addr <= addr;
-                cfg_data <= w_data;
+                cfg_w_we       <= 1'b1;
+                cfg_w_np_sel   <= neuron;
+                cfg_w_addr     <= addr;
+                cfg_w_data     <= w_data;
+
                 w_bram_data[neuron][addr] = w_data;
-                @(posedge clk);
-            end
 
-            //Threshold Loading
-            for(int unsigned addr = 0; addr < depth; addr++) begin
-                logic [PW-1:0] t_data;
-                t_data = $urandom_range(0, 16'h00AA);;
-                cfg_we <= 1'b1;
-                cfg_is_weight <= 1'b0;
-                cfg_np_sel <= neuron;
-                cfg_addr <= addr;
-                cfg_data <= t_data;
-                t_bram_data[neuron][addr] = t_data;
+                cfg_t_we_np <= '0;
+
                 @(posedge clk);
             end
         end
 
-        cfg_we <= 1'b0;
+        cfg_w_we <= 1'b0;
+
+        // ----------------------------
+        // THRESHOLDS (PARALLEL WRITE)
+        // ----------------------------
+        for (int unsigned addr = 0; addr < depth; addr++) begin
+            cfg_t_we_np <= '1;
+
+            for (int unsigned neuron = 0; neuron < PN; neuron++) begin
+                logic [PW-1:0] t_data;
+                t_data = $urandom_range(0, 16'h00AA);
+
+                cfg_t_addr_np[neuron] <= addr;
+                cfg_t_data_np[neuron] <= t_data;
+
+                t_bram_data[neuron][addr] = t_data;
+            end
+
+            @(posedge clk);
+        end
+
+        cfg_t_we_np <= '0;
+
         ram_finished <= 1'b1;
         @(posedge clk);
     end
@@ -224,7 +288,19 @@ module tb_layer_bank #(
             x_q.push_back(x);
             for (int n = 0; n < PN; n++) begin
                 if (np_active[n]) begin
-                    w_q[n].push_back(w_bram_data[n][w_ptr % DEPTH]);
+                    logic [63:0] w_word;
+                    logic [PW-1:0] w_slice;
+
+                    w_word = w_bram_data[n][(w_ptr >> 2) % DEPTH];
+
+                    case (w_ptr[1:0])
+                        2'd0: w_slice = w_word[15:0];
+                        2'd1: w_slice = w_word[31:16];
+                        2'd2: w_slice = w_word[47:32];
+                        2'd3: w_slice = w_word[63:48];
+                    endcase
+
+                    w_q[n].push_back(w_slice);
                 end
             end
             w_ptr++;
@@ -244,6 +320,7 @@ module tb_layer_bank #(
                 x_q = {};
                 for (int n = 0; n < PN; n++) w_q[n] = {};
                 beat_count = 0;
+                w_ptr = 0;
             end
         end
     end
