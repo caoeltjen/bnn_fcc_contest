@@ -155,6 +155,7 @@ module tb_config_manager #(
         int unsigned max_bytes_per_neuron;
         int unsigned num_neurons_tmp;
         int unsigned bytes_per_neuron_tmp;
+        int unsigned threshold_beats;
 
         header = '0;
         header.msg_type = 8'($urandom_range(0, 1));
@@ -162,17 +163,27 @@ module tb_config_manager #(
         header.layer_inputs = 16'($urandom);
         header.reserved = 32'($urandom);
 
-        payload_size = 0;
-        while ((payload_size < MIN_PAYLOAD_BYTES) || (payload_size > MAX_PAYLOAD_BYTES)) begin
-            num_neurons_tmp = $urandom_range(1, 12);
-            max_bytes_per_neuron = MAX_PAYLOAD_BYTES / num_neurons_tmp;
-            if (max_bytes_per_neuron == 0) begin
-                max_bytes_per_neuron = 1;
+        if (header.msg_type == 8'd0) begin
+            payload_size = 0;
+            while ((payload_size < MIN_PAYLOAD_BYTES) || (payload_size > MAX_PAYLOAD_BYTES)) begin
+                num_neurons_tmp = $urandom_range(1, 12);
+                max_bytes_per_neuron = MAX_PAYLOAD_BYTES / num_neurons_tmp;
+                if (max_bytes_per_neuron == 0) begin
+                    max_bytes_per_neuron = 1;
+                end
+                bytes_per_neuron_tmp = $urandom_range(1, max_bytes_per_neuron);
+                payload_size = num_neurons_tmp * bytes_per_neuron_tmp;
+                header.num_neurons = 16'(num_neurons_tmp);
+                header.bytes_per_neuron = 16'(bytes_per_neuron_tmp);
             end
-            bytes_per_neuron_tmp = $urandom_range(1, max_bytes_per_neuron);
-            payload_size = num_neurons_tmp * bytes_per_neuron_tmp;
-            header.num_neurons = 16'(num_neurons_tmp);
-            header.bytes_per_neuron = 16'(bytes_per_neuron_tmp);
+        end else begin
+            threshold_beats = 0;
+            while ((payload_size < MIN_PAYLOAD_BYTES) || (payload_size > MAX_PAYLOAD_BYTES)) begin
+                threshold_beats = $urandom_range(1, MAX_PAYLOAD_BYTES / 8);
+                payload_size = threshold_beats * 8;
+            end
+            header.bytes_per_neuron = 16'd4;
+            header.num_neurons = 16'((payload_size / 4));
         end
 
         header.total_bytes = 32'(payload_size);
@@ -182,12 +193,97 @@ module tb_config_manager #(
         end
     endtask
 
+    task automatic check_outputs(
+        input header_t expected_header,
+        input bit [7:0] expected_payload[],
+        input int test_id,
+        inout int unsigned expected_payload_idx,
+        inout int unsigned expected_bytes_left_in_neuron,
+        inout bit expected_payload_aligned,
+        inout bit header_checked,
+        inout bit test_failed
+    );
+        int unsigned beat_expected_bytes;
+
+        if (!header_checked && header_valid) begin
+            if ((msg_type !== expected_header.msg_type) ||
+                (layer_id !== expected_header.layer_id) ||
+                (layer_inputs !== expected_header.layer_inputs) ||
+                (num_neurons !== expected_header.num_neurons) ||
+                (bytes_per_neuron !== expected_header.bytes_per_neuron) ||
+                (total_bytes !== expected_header.total_bytes) ||
+                (reserved !== expected_header.reserved)) begin
+                $display("FAIL time=%0t test=%0d header mismatch", $time, test_id);
+                $display("  exp msg_type=%0h layer_id=%0h layer_inputs=%0h num_neurons=%0h bytes_per_neuron=%0h total_bytes=%0h reserved=%0h",
+                         expected_header.msg_type, expected_header.layer_id, expected_header.layer_inputs,
+                         expected_header.num_neurons, expected_header.bytes_per_neuron, expected_header.total_bytes,
+                         expected_header.reserved);
+                test_failed = 1'b1;
+            end
+            header_checked = 1'b1;
+        end
+
+        if (data_out_valid != '0) begin
+            if (expected_payload_aligned) begin
+                beat_expected_bytes = expected_bytes_left_in_neuron;
+                if (beat_expected_bytes > BYTE_LANES) begin
+                    beat_expected_bytes = BYTE_LANES;
+                end
+                if (beat_expected_bytes > (expected_payload.size() - expected_payload_idx)) begin
+                    beat_expected_bytes = expected_payload.size() - expected_payload_idx;
+                end
+            end else begin
+                beat_expected_bytes = expected_payload.size() - expected_payload_idx;
+                if (beat_expected_bytes > BYTE_LANES) begin
+                    beat_expected_bytes = BYTE_LANES;
+                end
+            end
+
+            for (int lane = 0; lane < BYTE_LANES; lane++) begin
+                bit expected_valid;
+                bit [7:0] expected_byte;
+
+                expected_valid = (lane < beat_expected_bytes);
+                expected_byte = expected_valid ? expected_payload[expected_payload_idx + lane] : 8'h00;
+
+                if (data_out_valid[lane] !== expected_valid) begin
+                    $display("FAIL time=%0t test=%0d lane=%0d valid mismatch exp=%0b act=%0b payload_idx=%0d bytes_left_in_neuron=%0d",
+                             $time, test_id, lane, expected_valid, data_out_valid[lane], expected_payload_idx,
+                             expected_bytes_left_in_neuron);
+                    test_failed = 1'b1;
+                end
+
+                if (data_out[lane] !== expected_byte) begin
+                    $display("FAIL time=%0t test=%0d lane=%0d data mismatch exp=0x%0h act=0x%0h payload_idx=%0d",
+                             $time, test_id, lane, expected_byte, data_out[lane], expected_payload_idx + lane);
+                    test_failed = 1'b1;
+                end
+            end
+
+            expected_payload_idx += beat_expected_bytes;
+            if (expected_payload_aligned) begin
+                if (beat_expected_bytes == expected_bytes_left_in_neuron) begin
+                    if (expected_payload_idx < expected_payload.size()) begin
+                        expected_bytes_left_in_neuron = int'(expected_header.bytes_per_neuron);
+                    end else begin
+                        expected_bytes_left_in_neuron = 0;
+                    end
+                end else begin
+                    expected_bytes_left_in_neuron -= beat_expected_bytes;
+                end
+            end
+        end
+    endtask
+
     task automatic run_test(input int test_id);
         header_t expected_header;
         bit [7:0] expected_payload[];
         bus_word_t beats[];
         keep_t keeps[];
         int unsigned expected_payload_idx;
+        int unsigned expected_bytes_left_in_neuron;
+        int unsigned drain_cycles;
+        bit expected_payload_aligned;
         bit header_checked;
         bit test_failed;
 
@@ -196,6 +292,9 @@ module tb_config_manager #(
         build_stream(expected_header, expected_payload, beats, keeps);
 
         expected_payload_idx = 0;
+        expected_bytes_left_in_neuron = int'(expected_header.bytes_per_neuron);
+        expected_payload_aligned = (expected_header.msg_type == 8'd0);
+        drain_cycles = 0;
         header_checked = 1'b0;
         test_failed = 1'b0;
 
@@ -208,148 +307,27 @@ module tb_config_manager #(
 
             while (!config_ready) begin
                 @(posedge clk);
-                // i set it to check for total_bytes so that we don't have to wait an arbitrary number
-                // of clock cycles for the header to come out before we start checking it.
-                // of the random numbers, if the number of total_bytes is the same from the previous test
-                // to the current one, this will "fail". reviewing the waveform will show that the header is filled
-                // properly. 
-                if (!header_checked && header_valid) begin
-                    if ((msg_type !== expected_header.msg_type) ||
-                        (layer_id !== expected_header.layer_id) ||
-                        (layer_inputs !== expected_header.layer_inputs) ||
-                        (num_neurons !== expected_header.num_neurons) ||
-                        (bytes_per_neuron !== expected_header.bytes_per_neuron) ||
-                        (total_bytes !== expected_header.total_bytes) ||
-                        (reserved !== expected_header.reserved)) begin
-                        $display("FAIL time=%0t test=%0d header mismatch", $time, test_id);
-                        $display("  exp msg_type=%0h layer_id=%0h layer_inputs=%0h num_neurons=%0h bytes_per_neuron=%0h total_bytes=%0h reserved=%0h",
-                                 expected_header.msg_type, expected_header.layer_id, expected_header.layer_inputs,
-                                 expected_header.num_neurons, expected_header.bytes_per_neuron, expected_header.total_bytes,
-                                 expected_header.reserved);
-                        test_failed = 1'b1;
-                    end
-                    header_checked = 1'b1;
-                end
-
-                if (data_out_valid != '0) begin
-                    for (int lane = 0; lane < BYTE_LANES; lane++) begin
-                        bit expected_valid;
-                        bit [7:0] expected_byte;
-
-                        expected_valid = (expected_payload_idx < expected_payload.size());
-                        expected_byte = expected_valid ? expected_payload[expected_payload_idx] : 8'h00;
-
-                        if (data_out_valid[lane] !== expected_valid) begin
-                            $display("FAIL time=%0t test=%0d lane=%0d valid mismatch exp=%0b act=%0b payload_idx=%0d",
-                                     $time, test_id, lane, expected_valid, data_out_valid[lane], expected_payload_idx);
-                            test_failed = 1'b1;
-                        end
-
-                        if (expected_valid) begin
-                            if (data_out[lane] !== expected_byte) begin
-                                $display("FAIL time=%0t test=%0d lane=%0d data mismatch exp=0x%0h act=0x%0h payload_idx=%0d",
-                                         $time, test_id, lane, expected_byte, data_out[lane], expected_payload_idx);
-                                test_failed = 1'b1;
-                            end
-                            expected_payload_idx++;
-                        end
-                    end
-                end
+                check_outputs(expected_header, expected_payload, test_id, expected_payload_idx,
+                              expected_bytes_left_in_neuron, expected_payload_aligned,
+                              header_checked, test_failed);
             end
 
             @(posedge clk iff config_ready);
-            if (!header_checked && header_valid) begin
-                if ((msg_type !== expected_header.msg_type) ||
-                    (layer_id !== expected_header.layer_id) ||
-                    (layer_inputs !== expected_header.layer_inputs) ||
-                    (num_neurons !== expected_header.num_neurons) ||
-                    (bytes_per_neuron !== expected_header.bytes_per_neuron) ||
-                    (total_bytes !== expected_header.total_bytes) ||
-                    (reserved !== expected_header.reserved)) begin
-                    $display("FAIL time=%0t test=%0d header mismatch", $time, test_id);
-                    $display("  exp msg_type=%0h layer_id=%0h layer_inputs=%0h num_neurons=%0h bytes_per_neuron=%0h total_bytes=%0h reserved=%0h",
-                             expected_header.msg_type, expected_header.layer_id, expected_header.layer_inputs,
-                             expected_header.num_neurons, expected_header.bytes_per_neuron, expected_header.total_bytes,
-                             expected_header.reserved);
-                    test_failed = 1'b1;
-                end
-                header_checked = 1'b1;
-            end
-
-            if (data_out_valid != '0) begin
-                for (int lane = 0; lane < BYTE_LANES; lane++) begin
-                    bit expected_valid;
-                    bit [7:0] expected_byte;
-
-                    expected_valid = (expected_payload_idx < expected_payload.size());
-                    expected_byte = expected_valid ? expected_payload[expected_payload_idx] : 8'h00;
-
-                    if (data_out_valid[lane] !== expected_valid) begin
-                        $display("FAIL time=%0t test=%0d lane=%0d valid mismatch exp=%0b act=%0b payload_idx=%0d",
-                                 $time, test_id, lane, expected_valid, data_out_valid[lane], expected_payload_idx);
-                        test_failed = 1'b1;
-                    end
-
-                    if (expected_valid) begin
-                        if (data_out[lane] !== expected_byte) begin
-                            $display("FAIL time=%0t test=%0d lane=%0d data mismatch exp=0x%0h act=0x%0h payload_idx=%0d",
-                                     $time, test_id, lane, expected_byte, data_out[lane], expected_payload_idx);
-                            test_failed = 1'b1;
-                        end
-                        expected_payload_idx++;
-                    end
-                end
-            end
+            check_outputs(expected_header, expected_payload, test_id, expected_payload_idx,
+                          expected_bytes_left_in_neuron, expected_payload_aligned,
+                          header_checked, test_failed);
         end
 
         @(negedge clk);
         drive_idle();
 
-        repeat (6) begin
+        while ((expected_payload_idx != expected_payload.size()) &&
+         (drain_cycles < (expected_payload.size() + int'(expected_header.num_neurons) + 8))) begin
             @(posedge clk);
-
-            if (!header_checked && total_bytes == expected_header.total_bytes) begin
-                if ((msg_type !== expected_header.msg_type) ||
-                    (layer_id !== expected_header.layer_id) ||
-                    (layer_inputs !== expected_header.layer_inputs) ||
-                    (num_neurons !== expected_header.num_neurons) ||
-                    (bytes_per_neuron !== expected_header.bytes_per_neuron) ||
-                    (total_bytes !== expected_header.total_bytes) ||
-                    (reserved !== expected_header.reserved)) begin
-                    $display("FAIL time=%0t test=%0d header mismatch", $time, test_id);
-                    // $display("  exp msg_type=%0h layer_id=%0h layer_inputs=%0h num_neurons=%0h bytes_per_neuron=%0h total_bytes=%0h reserved=%0h",
-                    //          expected_header.msg_type, expected_header.layer_id, expected_header.layer_inputs,
-                    //          expected_header.num_neurons, expected_header.bytes_per_neuron, expected_header.total_bytes,
-                    //          expected_header.reserved);
-                    test_failed = 1'b1;
-                end
-                header_checked = 1'b1;
-            end
-
-            if (data_out_valid != '0) begin
-                for (int lane = 0; lane < BYTE_LANES; lane++) begin
-                    bit expected_valid;
-                    bit [7:0] expected_byte;
-
-                    expected_valid = (expected_payload_idx < expected_payload.size());
-                    expected_byte = expected_valid ? expected_payload[expected_payload_idx] : 8'h00;
-
-                    if (data_out_valid[lane] !== expected_valid) begin
-                        $display("FAIL time=%0t test=%0d lane=%0d valid mismatch exp=%0b act=%0b payload_idx=%0d",
-                                 $time, test_id, lane, expected_valid, data_out_valid[lane], expected_payload_idx);
-                        test_failed = 1'b1;
-                    end
-
-                    if (expected_valid) begin
-                        if (data_out[lane] !== expected_byte) begin
-                            $display("FAIL time=%0t test=%0d lane=%0d data mismatch exp=0x%0h act=0x%0h payload_idx=%0d",
-                                     $time, test_id, lane, expected_byte, data_out[lane], expected_payload_idx);
-                            test_failed = 1'b1;
-                        end
-                        expected_payload_idx++;
-                    end
-                end
-            end
+            check_outputs(expected_header, expected_payload, test_id, expected_payload_idx,
+                          expected_bytes_left_in_neuron, expected_payload_aligned,
+                          header_checked, test_failed);
+            drain_cycles++;
         end
 
         if (!header_checked) begin

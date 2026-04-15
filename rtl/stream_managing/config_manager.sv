@@ -60,6 +60,10 @@ module config_manager #(
     logic shift_out_last;
     logic [BUS_WIDTH-1:0] shift_out_data;
     logic [(BUS_WIDTH/8)-1:0] shift_out_keep;
+    logic [7:0] shift_cfg_msg_type;
+    logic shift_cfg_msg_type_valid;
+    logic [15:0] shift_cfg_bytes_per_neuron;
+    logic shift_cfg_bytes_per_neuron_valid;
 
     // payload data buffered out of the config stream
     logic [7:0] data_out_r[0:7];
@@ -70,7 +74,8 @@ module config_manager #(
     // shift register to read in data for header parsing and payload storage
     shift_reg #(
         .WIDTH(BUS_WIDTH),
-        .DEPTH(3)
+        .DEPTH(3),
+        .ALIGN_TO_BYTES_PER_NEURON(1'b1)
     ) header_shift_reg (
         .clk(clk),
         .rst(rst),
@@ -78,6 +83,10 @@ module config_manager #(
         .shift_in_keep(config_keep),
         .shift_in_data(config_data_in),
         .shift_in_last(config_last),
+        .msg_type(shift_cfg_msg_type),
+        .msg_type_valid(shift_cfg_msg_type_valid),
+        .bytes_per_neuron(shift_cfg_bytes_per_neuron),
+        .bytes_per_neuron_valid(shift_cfg_bytes_per_neuron_valid),
         .shift_in_ready(shift_in_ready),
         .shift_out_valid(shift_out_valid),
         .shift_out_data(shift_out_data),
@@ -121,6 +130,10 @@ module config_manager #(
         data_out_valid_next = '0;
         shift_out_ready = 1'b0;
         header_valid_next = 1'b0;
+        shift_cfg_msg_type = msg_type_r;
+        shift_cfg_msg_type_valid = 1'b0;
+        shift_cfg_bytes_per_neuron = bytes_per_neuron_r;
+        shift_cfg_bytes_per_neuron_valid = 1'b0;
 
         case (curr_state)
             IDLE: begin
@@ -141,6 +154,10 @@ module config_manager #(
                 if (shift_out_valid) begin
                     shift_out_ready = 1'b1;
                     header_valid_next = 1'b1;
+                    shift_cfg_msg_type = header_word0_r[7:0];
+                    shift_cfg_msg_type_valid = 1'b1;
+                    shift_cfg_bytes_per_neuron = header_word0_r[63:48];
+                    shift_cfg_bytes_per_neuron_valid = 1'b1;
                     // after reading in second header beat, parse the header and move to payload state
                     // remember, the shift register handles the keep, so we don't need to validate here
                     msg_type_r_next = header_word0_r[7:0];
