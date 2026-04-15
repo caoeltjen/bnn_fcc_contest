@@ -21,9 +21,13 @@ module layer_bank #(
     input  logic [PN-1:0][ADDR_W-1:0] cfg_t_addr_np,
     input  logic [PN-1:0][PW-1:0]  cfg_t_data_np,
 
+    input  logic                   image_last,
+
     output logic [PN-1:0]          y,
     output logic [PN-1:0][PW-1:0]  popcount,
-    output logic [PN-1:0]          valid_out
+    output logic [PN-1:0]          valid_out,
+
+    output logic [PN-1:0]          last_img_out
 );
 
     logic [PN-1:0] cfg_w_we_np;
@@ -78,6 +82,8 @@ module layer_bank #(
                 .x          (x),
                 .valid_in   (valid_in & np_active[i]),
 
+                .image_last (image_last),
+
                 .cfg_done   (cfg_done_np[i]),
 
                 .cfg_w_we   (cfg_w_we_np[i]),
@@ -90,7 +96,9 @@ module layer_bank #(
 
                 .y          (y[i]),
                 .popcount   (popcount[i]),
-                .valid_out  (valid_out[i])
+                .valid_out  (valid_out[i]),
+
+                .last_img_out(last_img_out[i])
             );
         end
     endgenerate

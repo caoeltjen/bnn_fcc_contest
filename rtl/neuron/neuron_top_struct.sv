@@ -6,6 +6,8 @@ module neuron_top_struct #(
     input logic           rst,
     input logic [PW-1:0]  x,
 
+    input logic           image_last,
+
     input logic           thres_read_en,
     input logic [ADDR_W-1:0]     thres_read_addr,
 
@@ -25,7 +27,9 @@ module neuron_top_struct #(
 
     output logic          y,
     output logic [PW-1:0] popcount,
-    output logic          valid_out
+    output logic          valid_out,
+
+    output logic          last_img_out
 );
 
     logic [PW-1:0]  w;
@@ -35,6 +39,9 @@ module neuron_top_struct #(
     logic [PW-1:0]  x_r, x_r2;
     logic           valid_in_r, valid_in_r2;
     logic           last_r, last_r2;
+    logic           image_last_r;
+
+    assign last_img_out = valid_out & image_last_r;
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -44,6 +51,7 @@ module neuron_top_struct #(
             x_r2 <= '0;
             valid_in_r2 <= 1'b0;
             last_r2 <= 1'b0;
+            image_last_r <= 1'b0;
         end else begin
             x_r <= x;
             valid_in_r <= valid_in;
@@ -51,6 +59,12 @@ module neuron_top_struct #(
             x_r2 <= x_r;
             valid_in_r2 <= valid_in_r;
             last_r2 <= last_r;
+            if(image_last) begin
+                image_last_r <= 1'b1;
+            end
+            if(image_last_r & valid_out) begin
+                image_last_r <= 1'b0;
+            end
         end
     end
 

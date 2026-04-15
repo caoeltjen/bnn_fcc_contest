@@ -150,6 +150,8 @@ module bnn_fcc #(
     logic [PN0-1:0][PARALLEL_INPUTS-1:0] l0_popcount; // packed signal of popcount results for each neuron processor. 
     logic [PN0-1:0] l0_valid_out; // valid
 
+    logic [PN0-1:0] l0_last_img_out;
+
     logic [PARALLEL_INPUTS-1:0] layer0_x; // image data
     logic layer0_valid_in; // valid
 
@@ -163,7 +165,7 @@ module bnn_fcc #(
         .PW(PARALLEL_INPUTS),
         .PN(PN0),
         .ADDR_W(ADDR_W),
-        .INPUTS_PER_NEURON(784)
+        .INPUTS_PER_NEURON(TOPOLOGY[0])
     ) layer0_bank_inst (
         .rst(rst),
         .clk(clk),
@@ -180,9 +182,13 @@ module bnn_fcc #(
         .cfg_t_addr_np(l0_cfg_t_addr_np),
         .cfg_t_data_np(l0_cfg_t_data_np),
 
+        .image_last(img_data_out_last),
+
         .y(l0_y),
         .popcount(l0_popcount),
-        .valid_out(l0_valid_out)
+        .valid_out(l0_valid_out),
+
+        .last_img_out(l0_last_img_out)
     );
 
 //------------------------------------------------------------------------------
@@ -204,6 +210,8 @@ module bnn_fcc #(
     logic [PN1-1:0][PARALLEL_INPUTS-1:0] l1_popcount; // packed signal of popcount results for each neuron processor. 
     logic [PN1-1:0] l1_valid_out; // valid
 
+    logic [PN1-1:0] l1_last_img_out;
+
     logic [PARALLEL_INPUTS-1:0] layer1_x; // image data
     logic layer1_valid_in; // valid
 
@@ -217,7 +225,7 @@ module bnn_fcc #(
         .PW(PARALLEL_INPUTS),
         .PN(PN1),
         .ADDR_W(ADDR_W),
-        .INPUTS_PER_NEURON(256)
+        .INPUTS_PER_NEURON(TOPOLOGY[1])
     ) layer1_bank_inst (
         .rst(rst),
         .clk(clk),
@@ -234,9 +242,13 @@ module bnn_fcc #(
         .cfg_t_addr_np(l1_cfg_t_addr_np),
         .cfg_t_data_np(l1_cfg_t_data_np),
 
+        .image_last(l0_last_img_out[0]),
+
         .y(l1_y),
         .popcount(l1_popcount),
-        .valid_out(l1_valid_out)
+        .valid_out(l1_valid_out),
+
+        .last_img_out(l1_last_img_out)
     );
 
 //------------------------------------------------------------------------------
@@ -258,6 +270,8 @@ module bnn_fcc #(
     logic [PN2-1:0][PARALLEL_INPUTS-1:0] l2_popcount; // packed signal of popcount results for each neuron processor. 
     logic [PN2-1:0] l2_valid_out; // valid
 
+    logic [PN2-1:0] l2_last_img_out;
+
     logic [PARALLEL_INPUTS-1:0] layer2_x; // image data
     logic layer2_valid_in; // valid
 
@@ -271,7 +285,7 @@ module bnn_fcc #(
         .PW(PARALLEL_INPUTS),
         .PN(PN2),
         .ADDR_W(ADDR_W),
-        .INPUTS_PER_NEURON(256)
+        .INPUTS_PER_NEURON(TOPOLOGY[2])
     ) layer2_bank_inst (
         .rst(rst),
         .clk(clk),
@@ -288,9 +302,13 @@ module bnn_fcc #(
         .cfg_t_addr_np(l2_cfg_t_addr_np),
         .cfg_t_data_np(l2_cfg_t_data_np),
 
+        .image_last(l1_last_img_out[0]),
+
         .y(l2_y),
         .popcount(l2_popcount),
-        .valid_out(l2_valid_out)
+        .valid_out(l2_valid_out),
+
+        .last_img_out(l2_last_img_out)
     );
 
 //------------------------------------------------------------------------------

@@ -11,6 +11,8 @@ module neuron_top #(
 
     input logic           cfg_done,
 
+    input logic           image_last,
+
     input  logic         cfg_w_we,
     input  logic [8:0]   cfg_w_addr,
     input  logic [63:0] cfg_w_data,
@@ -21,7 +23,9 @@ module neuron_top #(
 
     output logic          y,
     output logic [PW-1:0] popcount,
-    output logic          valid_out
+    output logic          valid_out,
+
+    output logic          last_img_out
 );
 
     logic                  thres_read_en;
@@ -37,6 +41,7 @@ module neuron_top #(
     ) neuron_top_cont_inst (
         .clk(clk),
         .rst(rst),
+        .image_last(image_last),
         .cfg_done(cfg_done),
         .thres_read_en(thres_read_en),
         .thres_read_addr(thres_read_addr),
@@ -54,6 +59,8 @@ module neuron_top #(
         .rst(rst),
         .x(x),
 
+        .image_last(image_last),
+
         .cfg_w_we(cfg_w_we),
         .cfg_w_addr(cfg_w_addr),
         .cfg_w_data(cfg_w_data),
@@ -70,7 +77,9 @@ module neuron_top #(
         .valid_in(valid_in),
         .y(y),
         .popcount(popcount),
-        .valid_out(valid_out)
+        .valid_out(valid_out),
+
+        .last_img_out(last_img_out)
     );
 
 endmodule

@@ -8,6 +8,8 @@ module neuron_top_cont # (
 
     input logic            cfg_done,
 
+    input logic            image_last,
+
     output logic           thres_read_en,
     output logic [ADDR_W-1:0]     thres_read_addr,
 
@@ -71,6 +73,10 @@ module neuron_top_cont # (
                     thres_read_addr <= thres_read_addr + 1;
                     beat_count <= '0;
                     w_read_addr <= w_read_addr + 1 + PAD_READ_BEATS;
+                end
+                if(image_last) begin
+                    thres_read_addr <= '0;
+                    w_read_addr <= '0;
                 end
             end
         end
