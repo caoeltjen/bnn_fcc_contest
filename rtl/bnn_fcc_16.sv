@@ -495,7 +495,7 @@ module bnn_fcc_16 #(
             l12_last_image_r2 <= 1'b0;
         end
         else begin
-            layer2_valid_in <= 1'b0;
+            l12_valid_in <= 1'b0;
 
             l12_last_image_r1 <= l1_last_img_out[0];
             l12_last_image_r2 <= l12_last_image_r1;
@@ -506,10 +506,10 @@ module bnn_fcc_16 #(
 
                 // Generic version -- Assumes Parallel Inputs is divisible by your layer size (PN)
                 for (int i = 0; i < PARALLEL_INPUTS / PN1; i++) begin
-                    layer2_x[i*PN1 +: PN1] <= l12_buf[i];
+                    l12_data[i*PN1 +: PN1] <= l12_buf[i];
                 end
 
-                layer2_valid_in <= 1'b1; // set valid signal
+                l12_valid_in <= 1'b1; // set valid signal
                 l12_buf_full <= 1'b0; // set full to 0
             end
             else if(&l1_valid_out) begin // if the buffer isnt full and the outputs on the previous layer are valid
