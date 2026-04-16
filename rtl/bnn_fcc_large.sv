@@ -740,7 +740,7 @@ module bnn_fcc_large #(
                             l0_cfg_t_data_np[0] <= t0;
                             l0_cfg_t_data_np[1] <= t1;
 
-                            t_quarters <= t_quarters + 1'b1;
+                            t_eights <= t_eights + 1'b1;
                         end
                         else if (t_eights == 3'b001) begin
                             l0_cfg_t_we_np[2]   <= 1'b1;
@@ -752,7 +752,7 @@ module bnn_fcc_large #(
                             l0_cfg_t_data_np[2] <= t0;
                             l0_cfg_t_data_np[3] <= t1;
 
-                            t_quarters <= t_quarters + 1'b1;
+                            t_eights <= t_eights + 1'b1;
                         end
                         else if (t_eights == 3'b010) begin
                             l0_cfg_t_we_np[4]   <= 1'b1;
@@ -764,7 +764,7 @@ module bnn_fcc_large #(
                             l0_cfg_t_data_np[4] <= t0;
                             l0_cfg_t_data_np[5] <= t1;
 
-                            t_quarters <= t_quarters + 1'b1;
+                            t_eights <= t_eights + 1'b1;
                         end
                         else if (t_eights == 3'b011) begin
                             // next 4 thresholds go to neuron processors 4,5,6,7
@@ -776,6 +776,8 @@ module bnn_fcc_large #(
 
                             l0_cfg_t_data_np[6] <= t0;
                             l0_cfg_t_data_np[7] <= t1;
+
+                            t_eights <= t_eights + 1'b1;
                         end
                         else if (t_eights == 4'b100) begin
                             l0_cfg_t_we_np[8]   <= 1'b1;
@@ -786,6 +788,8 @@ module bnn_fcc_large #(
 
                             l0_cfg_t_data_np[8] <= t0;
                             l0_cfg_t_data_np[9] <= t1;
+
+                            t_eights <= t_eights + 1'b1;
                         end
                         else if (t_eights == 4'b101) begin
                             l0_cfg_t_we_np[10]   <= 1'b1;
@@ -806,6 +810,8 @@ module bnn_fcc_large #(
 
                             l0_cfg_t_data_np[12] <= t0;
                             l0_cfg_t_data_np[13] <= t1;
+
+                            t_eights <= t_eights + 1'b1;
                         end
                         else begin
                             l0_cfg_t_we_np[14]   <= 1'b1;
@@ -996,69 +1002,6 @@ module bnn_fcc_large #(
                                 weight_iter <= weight_iter + 1; // we have done a full iteration of writing weights, we increment the iteration counter
                                 cfg_addr_count <= (weight_iter + 1'b1) * L2_WORDS_PER_NEURON; // we move the address count to the next set of weights for the next iteration
                             end
-                        end
-                    end
-
-                    else if(!active_is_weight) begin
-                        logic [31:0] t0_32, t1_32;
-                        logic [15:0] t0, t1;
-
-                        t0_32 = {cfg_payload_bytes[3], cfg_payload_bytes[2], cfg_payload_bytes[1], cfg_payload_bytes[0]};
-                        t1_32 = {cfg_payload_bytes[7], cfg_payload_bytes[6], cfg_payload_bytes[5], cfg_payload_bytes[4]};
-
-                        t0 = t0_32[15:0];
-                        t1 = t1_32[15:0];
-
-                        if (t_quarters == 2'b00) begin
-                            // first 4 thresholds go to neuron processors 0,1,2,3
-                            l2_cfg_t_we_np[0]   <= 1'b1;
-                            l2_cfg_t_we_np[1]   <= 1'b1;
-
-                            l2_cfg_t_addr_np[0] <= cfg_addr_count;
-                            l2_cfg_t_addr_np[1] <= cfg_addr_count;
-
-                            l2_cfg_t_data_np[0] <= t0;
-                            l2_cfg_t_data_np[1] <= t1;
-
-                            t_eights <= t_eights + 1'b1;
-                        end
-                        else if (t_quarters == 2'b01) begin
-                            l2_cfg_t_we_np[2]   <= 1'b1;
-                            l2_cfg_t_we_np[3]   <= 1'b1;
-
-                            l2_cfg_t_addr_np[2] <= cfg_addr_count;
-                            l2_cfg_t_addr_np[3] <= cfg_addr_count;
-
-                            l2_cfg_t_data_np[2] <= t0;
-                            l2_cfg_t_data_np[3] <= t1;
-
-                            t_eights <= t_eights + 1'b1;
-                        end
-                        else if (t_quarters == 2'b10) begin
-                            l2_cfg_t_we_np[4]   <= 1'b1;
-                            l2_cfg_t_we_np[5]   <= 1'b1;
-
-                            l2_cfg_t_addr_np[4] <= cfg_addr_count;
-                            l2_cfg_t_addr_np[5] <= cfg_addr_count;
-
-                            l2_cfg_t_data_np[4] <= t0;
-                            l2_cfg_t_data_np[5] <= t1;
-
-                            t_eights <= t_eights + 1'b1;
-                        end
-                        else begin
-                            // next 4 thresholds go to neuron processors 4,5,6,7
-                            l2_cfg_t_we_np[6]   <= 1'b1;
-                            l2_cfg_t_we_np[7]   <= 1'b1;
-
-                            l2_cfg_t_addr_np[6] <= cfg_addr_count;
-                            l2_cfg_t_addr_np[7] <= cfg_addr_count;
-
-                            l2_cfg_t_data_np[6] <= t0;
-                            l2_cfg_t_data_np[7] <= t1;
-
-                            t_quarters <= 2'b00;
-                            cfg_addr_count  <= cfg_addr_count + 1'b1;
                         end
                     end
                 end
