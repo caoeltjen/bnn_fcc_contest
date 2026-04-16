@@ -133,6 +133,51 @@ module tb_shift_reg #(
         return word;
     endfunction
 
+    function automatic bus_word_t mask_by_keep(
+        input bus_word_t data,
+        input keep_t keep
+    );
+        bus_word_t word;
+
+        word = '0;
+        for (int lane = 0; lane < BYTE_LANES; lane++) begin
+            if (keep[lane]) begin
+                word[lane*8 +: 8] = data[lane*8 +: 8];
+            end
+        end
+        return word;
+    endfunction
+
+    function automatic bus_word_t make_header_word0(
+        input logic [7:0] msg_type,
+        input logic [7:0] layer_id,
+        input logic [15:0] layer_inputs,
+        input logic [15:0] num_neurons,
+        input logic [15:0] bytes_per_neuron_cfg
+    );
+        bus_word_t word;
+
+        word = '0;
+        word[7:0] = msg_type;
+        word[15:8] = layer_id;
+        word[31:16] = layer_inputs;
+        word[47:32] = num_neurons;
+        word[63:48] = bytes_per_neuron_cfg;
+        return word;
+    endfunction
+
+    function automatic bus_word_t make_header_word1(
+        input logic [31:0] total_bytes,
+        input logic [31:0] reserved
+    );
+        bus_word_t word;
+
+        word = '0;
+        word[31:0] = total_bytes;
+        word[63:32] = reserved;
+        return word;
+    endfunction
+
     task automatic drive_plain_idle();
         begin
             plain_shift_in_valid <= 1'b0;
@@ -173,15 +218,19 @@ module tb_shift_reg #(
         input beat_t expected,
         inout bit test_failed
     );
+        bus_word_t expected_masked_data;
+
+        expected_masked_data = mask_by_keep(expected.data, expected.keep);
+
         if (plain_shift_out_keep !== expected.keep) begin
             $display("FAIL time=%0t test=%0d beat=%0d keep mismatch exp=%b act=%b",
                      $time, test_id, beat_id, expected.keep, plain_shift_out_keep);
             test_failed = 1'b1;
         end
 
-        if (plain_shift_out_data !== expected.data) begin
+        if (plain_shift_out_data !== expected_masked_data) begin
             $display("FAIL time=%0t test=%0d beat=%0d data mismatch exp=%h act=%h",
-                     $time, test_id, beat_id, expected.data, plain_shift_out_data);
+                     $time, test_id, beat_id, expected_masked_data, plain_shift_out_data);
             test_failed = 1'b1;
         end
 
@@ -299,6 +348,7 @@ module tb_shift_reg #(
         output logic [15:0] bytes_per_neuron_cfg
     );
         bit [7:0] payload_bytes[];
+        bit [7:0] available_bytes[$];
         keep_t payload_keeps[];
         int unsigned payload_size;
         int unsigned payload_idx;
@@ -308,15 +358,23 @@ module tb_shift_reg #(
         int unsigned expected_idx;
         int unsigned beat_bytes;
         int unsigned num_beats;
+        logic [7:0] layer_id;
+        logic [15:0] layer_inputs;
+        logic [31:0] reserved;
 
         msg_type = 8'($urandom_range(0, 1));
+        layer_id = 8'($urandom);
+        reserved = 32'($urandom);
         if (msg_type == 8'd0) begin
             bytes_per_neuron_cfg = 16'($urandom_range(1, BYTE_LANES + 4));
             num_neurons = $urandom_range(1, 4);
             payload_size = num_neurons * bytes_per_neuron_cfg;
+            layer_inputs = 16'(bytes_per_neuron_cfg * 8);
         end else begin
             bytes_per_neuron_cfg = 16'd4;
             payload_size = $urandom_range(1, MAX_RANDOM_BEATS) * 4;
+            num_neurons = payload_size / 4;
+            layer_inputs = 16'($urandom_range(1, 1024));
         end
 
         payload_bytes = new[payload_size];
@@ -347,42 +405,88 @@ module tb_shift_reg #(
             payload_idx += valid_bytes;
         end
 
-        input_beats = new[payload_keeps.size()];
+        input_beats = new[payload_keeps.size() + 2];
+        input_beats[0] = '{
+            data: make_header_word0(msg_type, layer_id, layer_inputs, 16'(num_neurons), bytes_per_neuron_cfg),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[1] = '{
+            data: make_header_word1(32'(payload_size), reserved),
+            keep: '1,
+            last: 1'b0
+        };
         payload_idx = 0;
-        foreach (input_beats[beat]) begin
-            input_beats[beat].data = '0;
-            input_beats[beat].keep = payload_keeps[beat];
-            input_beats[beat].last = (beat == input_beats.size() - 1);
+        for (int beat = 0; beat < payload_keeps.size(); beat++) begin
+            int beat_idx;
+
+            beat_idx = beat + 2;
+            input_beats[beat_idx].data = '0;
+            input_beats[beat_idx].keep = payload_keeps[beat];
+            input_beats[beat_idx].last = (beat == payload_keeps.size() - 1);
             for (int lane = 0; lane < BYTE_LANES; lane++) begin
                 if (payload_keeps[beat][lane]) begin
-                    input_beats[beat].data[lane*8 +: 8] = payload_bytes[payload_idx];
+                    input_beats[beat_idx].data[lane*8 +: 8] = payload_bytes[payload_idx];
                     payload_idx++;
                 end
             end
         end
 
         if (msg_type == 8'd0) begin
-            expected_beats = new[0];
-            payload_idx = 0;
+            expected_beats = new[2];
+            expected_beats[0] = input_beats[0];
+            expected_beats[1] = input_beats[1];
             bytes_left_in_neuron = int'(bytes_per_neuron_cfg);
-            expected_idx = 0;
-            while (payload_idx < payload_size) begin
+            expected_idx = 2;
+
+            for (int beat = 2; beat < input_beats.size(); beat++) begin
+                for (int lane = 0; lane < BYTE_LANES; lane++) begin
+                    if (input_beats[beat].keep[lane]) begin
+                        available_bytes.push_back(input_beats[beat].data[lane*8 +: 8]);
+                    end
+                end
+
                 expected_beats = new[expected_idx + 1](expected_beats);
                 expected_beats[expected_idx].data = '0;
                 expected_beats[expected_idx].keep = '0;
-                beat_bytes = bytes_left_in_neuron;
+                beat_bytes = available_bytes.size();
                 if (beat_bytes > BYTE_LANES) begin
                     beat_bytes = BYTE_LANES;
                 end
-                if (beat_bytes > (payload_size - payload_idx)) begin
-                    beat_bytes = payload_size - payload_idx;
+                if (beat_bytes > bytes_left_in_neuron) begin
+                    beat_bytes = bytes_left_in_neuron;
                 end
+
                 for (int lane = 0; lane < beat_bytes; lane++) begin
-                    expected_beats[expected_idx].data[lane*8 +: 8] = payload_bytes[payload_idx + lane];
+                    expected_beats[expected_idx].data[lane*8 +: 8] = available_bytes.pop_front();
                     expected_beats[expected_idx].keep[lane] = 1'b1;
                 end
-                payload_idx += beat_bytes;
-                expected_beats[expected_idx].last = (payload_idx == payload_size);
+                expected_beats[expected_idx].last = input_beats[beat].last && (available_bytes.size() == 0);
+                if (beat_bytes == bytes_left_in_neuron) begin
+                    bytes_left_in_neuron = int'(bytes_per_neuron_cfg);
+                end else begin
+                    bytes_left_in_neuron -= beat_bytes;
+                end
+                expected_idx++;
+            end
+
+            while (available_bytes.size() != 0) begin
+                expected_beats = new[expected_idx + 1](expected_beats);
+                expected_beats[expected_idx].data = '0;
+                expected_beats[expected_idx].keep = '0;
+                beat_bytes = available_bytes.size();
+                if (beat_bytes > BYTE_LANES) begin
+                    beat_bytes = BYTE_LANES;
+                end
+                if (beat_bytes > bytes_left_in_neuron) begin
+                    beat_bytes = bytes_left_in_neuron;
+                end
+
+                for (int lane = 0; lane < beat_bytes; lane++) begin
+                    expected_beats[expected_idx].data[lane*8 +: 8] = available_bytes.pop_front();
+                    expected_beats[expected_idx].keep[lane] = 1'b1;
+                end
+                expected_beats[expected_idx].last = (available_bytes.size() == 0);
                 if (beat_bytes == bytes_left_in_neuron) begin
                     bytes_left_in_neuron = int'(bytes_per_neuron_cfg);
                 end else begin
@@ -499,19 +603,31 @@ module tb_shift_reg #(
         logic [7:0] msg_type;
         logic [15:0] bytes_per_neuron_cfg;
 
-        expected = new[4];
-        input_beats = new[3];
+        expected = new[6];
+        input_beats = new[5];
         msg_type = 8'd0;
         bytes_per_neuron_cfg = 16'd12;
 
-        expected[0] = '{data: pack_low_lanes(0, 8, 8'h00), keep: 8'hFF, last: 1'b0};
-        expected[1] = '{data: pack_low_lanes(8, 4, 8'h00), keep: 8'h0F, last: 1'b0};
-        expected[2] = '{data: pack_low_lanes(12, 8, 8'h00), keep: 8'hFF, last: 1'b0};
-        expected[3] = '{data: pack_low_lanes(20, 4, 8'h00), keep: 8'h0F, last: 1'b1};
+        input_beats[0] = '{
+            data: make_header_word0(8'd0, 8'd1, 16'd96, 16'd2, 16'd12),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[1] = '{
+            data: make_header_word1(32'd24, 32'h12345678),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[2] = '{data: pack_low_lanes(0, 8, 8'h00), keep: 8'hFF, last: 1'b0};
+        input_beats[3] = '{data: pack_low_lanes(8, 8, 8'h00), keep: 8'hFF, last: 1'b0};
+        input_beats[4] = '{data: pack_low_lanes(16, 8, 8'h00), keep: 8'hFF, last: 1'b1};
 
-        input_beats[0] = '{data: pack_low_lanes(0, 8, 8'h00), keep: 8'hFF, last: 1'b0};
-        input_beats[1] = '{data: pack_low_lanes(8, 8, 8'h00), keep: 8'hFF, last: 1'b0};
-        input_beats[2] = '{data: pack_low_lanes(16, 8, 8'h00), keep: 8'hFF, last: 1'b1};
+        expected[0] = input_beats[0];
+        expected[1] = input_beats[1];
+        expected[2] = '{data: pack_low_lanes(0, 8, 8'h00), keep: 8'hFF, last: 1'b0};
+        expected[3] = '{data: pack_low_lanes(8, 4, 8'h00), keep: 8'h0F, last: 1'b0};
+        expected[4] = '{data: pack_low_lanes(12, 8, 8'h00), keep: 8'hFF, last: 1'b0};
+        expected[5] = '{data: pack_low_lanes(20, 4, 8'h00), keep: 8'h0F, last: 1'b1};
 
         run_aligned_stream(1, input_beats, expected, msg_type, bytes_per_neuron_cfg);
     endtask
@@ -523,19 +639,31 @@ module tb_shift_reg #(
         logic [7:0] msg_type;
         logic [15:0] bytes_per_neuron_cfg;
 
-        expected = new[2];
-        input_beats = new[2];
+        expected = new[4];
+        input_beats = new[4];
         input_keep = new[2];
         msg_type = 8'd1;
         bytes_per_neuron_cfg = 16'd4;
 
         input_keep[0] = 8'hF0;
         input_keep[1] = 8'h0F;
-        expected[0] = '{data: pack_by_keep(input_keep[0], 0, 8'h40), keep: input_keep[0], last: 1'b0};
-        expected[1] = '{data: pack_by_keep(input_keep[1], 4, 8'h40), keep: input_keep[1], last: 1'b1};
+        input_beats[0] = '{
+            data: make_header_word0(8'd1, 8'd2, 16'd256, 16'd4, 16'd4),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[1] = '{
+            data: make_header_word1(32'd16, 32'hCAFE1234),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[2] = '{data: pack_by_keep(input_keep[0], 0, 8'h40), keep: input_keep[0], last: 1'b0};
+        input_beats[3] = '{data: pack_by_keep(input_keep[1], 4, 8'h40), keep: input_keep[1], last: 1'b1};
 
-        input_beats[0] = expected[0];
-        input_beats[1] = expected[1];
+        expected[0] = input_beats[0];
+        expected[1] = input_beats[1];
+        expected[2] = input_beats[2];
+        expected[3] = input_beats[3];
 
         run_aligned_stream(2, input_beats, expected, msg_type, bytes_per_neuron_cfg);
     endtask
@@ -562,3 +690,4 @@ module tb_shift_reg #(
     end
 
 endmodule
+

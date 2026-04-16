@@ -115,12 +115,14 @@ module shift_reg #(
             logic push;
             logic pop;
             logic align_mode_r;
+            logic [1:0] header_beats_remaining_r;
             logic [15:0] aligned_bytes_per_neuron_r;
             logic [15:0] bytes_left_in_neuron_r;
             logic aligned_out_valid;
             logic [WIDTH-1:0] aligned_out_data;
             logic [BYTE_LANES-1:0] aligned_out_keep;
             logic aligned_out_last;
+            logic use_aligned_output;
             logic [BYTE_LANES-1:0] consume_mask[DEPTH-1:0];
             logic [WIDTH-1:0] remainder_data[DEPTH-1:0];
             logic [BYTE_LANES-1:0] remainder_keep[DEPTH-1:0];
@@ -259,15 +261,16 @@ module shift_reg #(
             // status registers and control signals
             assign shift_in_ready  = (count < COUNT_W'(DEPTH));
             assign push = shift_in_valid && shift_in_ready;
+            assign use_aligned_output = align_mode_r && (header_beats_remaining_r == 2'd0);
             assign pop  = shift_out_valid && shift_out_ready;
-            assign shift_out_valid = align_mode_r ? aligned_out_valid : (count > 0);
+            assign shift_out_valid = use_aligned_output ? aligned_out_valid : (count > 0);
 
             // hold behavior depending on if we're reading weights or thresholds
             always_comb begin
                 shift_out_data = '0;
                 shift_out_keep = '0;
                 shift_out_last = 1'b0;
-                if (align_mode_r) begin
+                if (use_aligned_output) begin
                     shift_out_data = aligned_out_data;
                     shift_out_keep = aligned_out_keep;
                     shift_out_last = aligned_out_last;
@@ -282,6 +285,7 @@ module shift_reg #(
                 if (rst) begin
                     count <= '0;
                     align_mode_r <= 1'b0;
+                    header_beats_remaining_r <= 2'd2;
                     aligned_bytes_per_neuron_r <= '0;
                     bytes_left_in_neuron_r <= '0;
                     for (int i = 0; i < DEPTH; i++) begin
@@ -303,7 +307,7 @@ module shift_reg #(
 
                     next_count = 0;
 
-                    if (align_mode_r && pop) begin
+                    if (use_aligned_output && pop) begin
                         // After an aligned transfer, keep only the bytes that were
                         // not consumed so the next beat can be assembled from them
                         // plus any newly pushed input data.
@@ -356,6 +360,10 @@ module shift_reg #(
                     end
                     count <= COUNT_W'(next_count);
 
+                    if (pop && (header_beats_remaining_r != 2'd0)) begin
+                        header_beats_remaining_r <= header_beats_remaining_r - 1'b1;
+                    end
+
                     if (msg_type_valid && ((msg_type != 8'd0) || bytes_per_neuron_valid)) begin
                         // Only treat header information as a mode change when a
                         // non-weight message is selected or a new bytes-per-neuron
@@ -370,7 +378,7 @@ module shift_reg #(
                             aligned_bytes_per_neuron_r <= '0;
                             bytes_left_in_neuron_r <= '0;
                         end
-                    end else if (align_mode_r && pop) begin
+                    end else if (use_aligned_output && pop) begin
                         // Reset the byte budget at each neuron boundary; otherwise
                         // carry the remaining bytes into the next aligned beat.
                         if (aligned_out_last) begin
@@ -385,6 +393,10 @@ module shift_reg #(
                     end else if (!align_mode_r && pop && shift_out_last) begin
                         aligned_bytes_per_neuron_r <= '0;
                         bytes_left_in_neuron_r <= '0;
+                    end
+
+                    if (pop && shift_out_last) begin
+                        header_beats_remaining_r <= 2'd2;
                     end
                 end
             end
