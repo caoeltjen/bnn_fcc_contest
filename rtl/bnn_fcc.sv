@@ -326,6 +326,8 @@ module bnn_fcc #(
 
     logic [IMG_BEAT_W-1:0] packed_img_beat;
 
+    logic img_to_fifo_last;
+
     // NOTE: we are ignoring img_data_out_last because of the assumption that the input image size is going to be 784 bits
     // we could change that to handle different sizes but that would also require changing 
     // the logic inside the neuron processor for last assertion.
@@ -343,9 +345,11 @@ module bnn_fcc #(
             img_l0_buf_valid  <= 1'b0;
             img_to_fifo       <= '0;
             img_to_fifo_valid <= 1'b0;
+            img_to_fifo_last <= 1'b0;
         end
         else begin
             img_to_fifo_valid <= 1'b0;
+            img_to_fifo_last <= img_data_out_last;
 
             if (&img_data_out_valid) begin // if the data is valid (all of it)
                 if (!img_l0_buf_valid) begin // if buffer isnt in use
@@ -367,14 +371,14 @@ module bnn_fcc #(
         .WIDTH(PARALLEL_INPUTS),
         .INPUTS(TOPOLOGY[0]),
         .NUM_REPLAYS(TOPOLOGY[1] / PN0),
-        .DEPTH(49)
+        .DEPTH(50)
     ) img_data_fifo_inst (
         .clk(clk),
         .rst(rst),
 
         .data_in(img_to_fifo),
         .valid_in(img_to_fifo_valid),
-        .img_data_last(img_data_out_last),
+        .img_data_last(img_to_fifo_last),
         //doesnt need a connection rn but could be useful
         .ready_in(), // this is a signal so we can monitor if the fifo is full from the outside
 
