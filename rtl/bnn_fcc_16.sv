@@ -476,6 +476,9 @@ module bnn_fcc_16 #(
     logic l12_buf_full; // flag to see when buffer is full
     logic [$clog2(PARALLEL_INPUTS / PN1)-1:0] l12_buf_idx; // index to keep track of where we are writing in the buffer
 
+    logic l12_last_pending;
+    logic layer2_last_in;
+
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
             l12_buf <= '{default: '0}; // reset everything
@@ -483,9 +486,13 @@ module bnn_fcc_16 #(
             layer2_valid_in <= 1'b0;
             l12_buf_full <= 1'b0;
             l12_buf_idx <= '0;
+
+            l12_last_pending <= 1'b0;
+            layer2_last_in   <= 1'b0;
         end
         else begin
             layer2_valid_in <= 1'b0;
+            layer2_last_in <= 1'b0;
 
             if(l12_buf_full) begin // if the buffer is full
                 // hardcoded version
@@ -498,10 +505,17 @@ module bnn_fcc_16 #(
 
                 layer2_valid_in <= 1'b1; // set valid signal
                 l12_buf_full <= 1'b0; // set full to 0
+
+                layer2_last_in  <= l12_last_pending;
+                l12_last_pending <= 1'b0;
             end
             else if(&l1_valid_out) begin // if the buffer isnt full and the outputs on the previous layer are valid
                 l12_buf[l12_buf_idx] <= l1_y; // write outputs to the buffer
                 l12_buf_idx <= l12_buf_idx + 1; // incremenet index
+
+                if (&l1_last_img_out) begin
+                    l12_last_pending <= 1'b1;
+                end
 
                 if(l12_buf_idx == (PARALLEL_INPUTS / PN1) - 1) begin // if we are at the end of the buffer
                     l12_buf_full <= 1'b1; // set full to 1
