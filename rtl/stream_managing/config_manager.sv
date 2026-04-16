@@ -179,6 +179,7 @@ module config_manager #(
             end
 
             PAYLOAD: begin
+                shift_cfg_msg_type_valid = 1'b1;
                 if (shift_out_valid) begin
                     shift_out_ready = 1'b1;
                     beat_valid_bytes = $countones(shift_out_keep);

@@ -104,6 +104,7 @@ module shift_reg #(
             // full bus beat per cycle.
             //
             localparam int COUNT_W = $clog2(DEPTH+1);
+            localparam int BYTES_W = $clog2(BYTE_LANES+1);
             
             // normal fifo stuff
             logic [WIDTH-1:0] fifo[DEPTH-1:0];
@@ -113,6 +114,22 @@ module shift_reg #(
             logic [WIDTH-1:0] masked_in_data;
             logic push;
             logic pop;
+            logic align_mode_r;
+            logic [15:0] aligned_bytes_per_neuron_r;
+            logic [15:0] bytes_left_in_neuron_r;
+            logic aligned_out_valid;
+            logic [WIDTH-1:0] aligned_out_data;
+            logic [BYTE_LANES-1:0] aligned_out_keep;
+            logic aligned_out_last;
+            logic [BYTE_LANES-1:0] consume_mask[DEPTH-1:0];
+            logic [WIDTH-1:0] remainder_data[DEPTH-1:0];
+            logic [BYTE_LANES-1:0] remainder_keep[DEPTH-1:0];
+            logic [BYTES_W-1:0] aligned_bytes_emitted;
+            logic [15:0] bytes_needed;
+            logic [15:0] total_valid_bytes;
+            logic message_last_seen;
+            logic should_align_next;
+            logic [15:0] next_bytes_per_neuron;
 
             // handle masking of bytes that aren't valid
             always_comb begin
@@ -122,6 +139,18 @@ module shift_reg #(
                         masked_in_data[i*8 +: 8] = shift_in_data[i*8 +: 8];
                     end else begin
                         masked_in_data[i*8 +: 8] = '0;
+                    end
+                end
+            end
+
+            always_comb begin
+                should_align_next = 1'b0;
+                next_bytes_per_neuron = aligned_bytes_per_neuron_r;
+
+                if (msg_type_valid) begin
+                    should_align_next = (msg_type == 8'd0) && bytes_per_neuron_valid && (bytes_per_neuron != 16'd0);
+                    if (bytes_per_neuron_valid && (bytes_per_neuron != 16'd0)) begin
+                        next_bytes_per_neuron = bytes_per_neuron;
                     end
                 end
             end
@@ -160,32 +189,86 @@ module shift_reg #(
                     //          so we increment the running total only by 4, and merge the new 4 valid bytes to the old 4 stored bytes to form the next output beat.  
             
 
-            // tracking how many bytes received
-            logic [15:0] bytes_received;
             always_comb begin
-                bytes_received = '0;
-                for (int i = 0; i < BYTE_LANES; i++) begin
-                    if (shift_in_valid && shift_in_keep[i]) begin
-                        bytes_received += 1;
+                int unsigned out_idx;
+                int unsigned rem_idx;
+                
+                // basically dupes of what the output would be registered here to keep track
+                // of the rest of the data as it's being streamed in
+                aligned_out_valid = 1'b0;
+                aligned_out_data = '0;
+                aligned_out_keep = '0;
+                aligned_out_last = 1'b0;
+                aligned_bytes_emitted = '0;
+                bytes_needed = bytes_left_in_neuron_r;
+                total_valid_bytes = '0;
+                message_last_seen = 1'b0;
+
+                if ((bytes_needed == '0) || (bytes_needed > BYTE_LANES)) begin
+                    bytes_needed = BYTE_LANES;
+                end
+                // initialize masks and remainder registers
+                for (int entry = 0; entry < DEPTH; entry++) begin
+                    consume_mask[entry] = '0;
+                    remainder_data[entry] = '0;
+                    remainder_keep[entry] = '0;
+                end
+
+                // count how many valid bytes are in the fifo and find the last valid byte so we know when to assert TLAST
+                // also generate the aligned output beat by consuming the valid bytes
+                out_idx = 0;
+                for (int entry = DEPTH-1; entry >= 0; entry--) begin
+                    if (entry < count) begin
+                        total_valid_bytes += 16'($countones(fifo_keep[entry]));
+                        message_last_seen |= fifo_last[entry]; // if fifo_last was ever asserted for any of the valid bytes
+                        for (int lane = 0; lane < BYTE_LANES; lane++) begin
+                            if (fifo_keep[entry][lane] && (out_idx < bytes_needed)) begin
+                                aligned_out_data[out_idx*8 +: 8] = fifo[entry][lane*8 +: 8];
+                                aligned_out_keep[out_idx] = 1'b1;
+                                consume_mask[entry][lane] = 1'b1;
+                                out_idx++;
+                            end
+                        end
                     end
                 end
-                // reset it if it's too big 
-                if (bytes_received > bytes_per_neuron) begin
-                    bytes_received -= bytes_per_neuron;
+
+                aligned_bytes_emitted = BYTES_W'(out_idx);
+                aligned_out_valid = (out_idx != 0);
+                // TLAST only leaves the module once every valid byte already in
+                // the FIFO has been consumed into this aligned output beat.
+                aligned_out_last = aligned_out_valid && message_last_seen && (total_valid_bytes == out_idx);
+                
+                // generate the "remainder" beats that will be merged with the new incoming data
+                for (int entry = 0; entry < DEPTH; entry++) begin
+                    rem_idx = 0;
+                    if (entry < count) begin
+                        for (int lane = 0; lane < BYTE_LANES; lane++) begin
+                            if (fifo_keep[entry][lane] && !consume_mask[entry][lane]) begin
+                                remainder_data[entry][rem_idx*8 +: 8] = fifo[entry][lane*8 +: 8];
+                                remainder_keep[entry][rem_idx] = 1'b1;
+                                rem_idx++;
+                            end
+                        end
+                    end
                 end
             end
             
             // status registers and control signals
             assign shift_in_ready  = (count < COUNT_W'(DEPTH));
-            assign shift_out_valid = (count > 0);
             assign push = shift_in_valid && shift_in_ready;
             assign pop  = shift_out_valid && shift_out_ready;
+            assign shift_out_valid = align_mode_r ? aligned_out_valid : (count > 0);
 
+            // hold behavior depending on if we're reading weights or thresholds
             always_comb begin
                 shift_out_data = '0;
                 shift_out_keep = '0;
                 shift_out_last = 1'b0;
-                if (count > 0) begin
+                if (align_mode_r) begin
+                    shift_out_data = aligned_out_data;
+                    shift_out_keep = aligned_out_keep;
+                    shift_out_last = aligned_out_last;
+                end else if (count > 0) begin
                     shift_out_data = fifo[count-1];
                     shift_out_keep = fifo_keep[count-1];
                     shift_out_last = fifo_last[count-1];
@@ -195,28 +278,108 @@ module shift_reg #(
             always_ff @(posedge clk or posedge rst) begin
                 if (rst) begin
                     count <= '0;
+                    align_mode_r <= 1'b0;
+                    aligned_bytes_per_neuron_r <= '0;
+                    bytes_left_in_neuron_r <= '0;
                     for (int i = 0; i < DEPTH; i++) begin
                         fifo[i] <= '0;
                         fifo_keep[i] <= '0;
                         fifo_last[i] <= 1'b0;
                     end
                 end else begin
-                    if (push) begin
-                        for (int i = DEPTH-1; i > 0; i--) begin
-                            fifo[i] <= fifo[i-1];
-                            fifo_keep[i] <= fifo_keep[i-1];
-                            fifo_last[i] <= fifo_last[i-1];
-                        end
-                        fifo[0] <= masked_in_data;
-                        fifo_keep[0] <= shift_in_keep;
-                        fifo_last[0] <= shift_in_last;
+                    logic [WIDTH-1:0] next_fifo[DEPTH-1:0];
+                    logic [BYTE_LANES-1:0] next_fifo_keep[DEPTH-1:0];
+                    logic next_fifo_last[DEPTH-1:0];
+                    int unsigned next_count;
+
+                    for (int i = 0; i < DEPTH; i++) begin
+                        next_fifo[i] = '0;
+                        next_fifo_keep[i] = '0;
+                        next_fifo_last[i] = 1'b0;
                     end
 
-                    case ({push, pop})
-                        2'b10: count <= count + 1'b1;
-                        2'b01: count <= count - 1'b1;
-                        default: count <= count;
-                    endcase
+                    next_count = 0;
+
+                    if (align_mode_r && pop) begin
+                        // After an aligned transfer, keep only the bytes that were
+                        // not consumed so the next beat can be assembled from them
+                        // plus any newly pushed input data.
+                        for (int src = 0; src < DEPTH; src++) begin
+                            if (src < count) begin
+                                if (remainder_keep[src] != '0) begin
+                                    next_fifo[next_count] = remainder_data[src];
+                                    next_fifo_keep[next_count] = remainder_keep[src];
+                                    next_fifo_last[next_count] = fifo_last[src];
+                                    next_count++;
+                                end
+                            end
+                        end
+                    end else if (pop) begin
+                        for (int src = 0; src < DEPTH-1; src++) begin
+                            if ((src + 1) < count) begin
+                                next_fifo[src] = fifo[src];
+                                next_fifo_keep[src] = fifo_keep[src];
+                                next_fifo_last[src] = fifo_last[src];
+                            end
+                        end
+                        next_count = count - 1'b1;
+                    end else begin
+                        for (int src = 0; src < DEPTH; src++) begin
+                            if (src < count) begin
+                                next_fifo[src] = fifo[src];
+                                next_fifo_keep[src] = fifo_keep[src];
+                                next_fifo_last[src] = fifo_last[src];
+                            end
+                        end
+                        next_count = count;
+                    end
+
+                    if (push) begin
+                        for (int i = DEPTH-1; i > 0; i--) begin
+                            next_fifo[i] = next_fifo[i-1];
+                            next_fifo_keep[i] = next_fifo_keep[i-1];
+                            next_fifo_last[i] = next_fifo_last[i-1];
+                        end
+                        next_fifo[0] = masked_in_data;
+                        next_fifo_keep[0] = shift_in_keep;
+                        next_fifo_last[0] = shift_in_last;
+                        next_count++;
+                    end
+
+                    for (int i = 0; i < DEPTH; i++) begin
+                        fifo[i] <= next_fifo[i];
+                        fifo_keep[i] <= next_fifo_keep[i];
+                        fifo_last[i] <= next_fifo_last[i];
+                    end
+                    count <= COUNT_W'(next_count);
+
+                    if (msg_type_valid) begin
+                        // A new header selects whether the following payload uses
+                        // neuron-aligned packing or plain beat streaming.
+                        align_mode_r <= should_align_next;
+                        if (should_align_next) begin
+                            aligned_bytes_per_neuron_r <= next_bytes_per_neuron;
+                            bytes_left_in_neuron_r <= next_bytes_per_neuron;
+                        end else begin
+                            aligned_bytes_per_neuron_r <= '0;
+                            bytes_left_in_neuron_r <= '0;
+                        end
+                    end else if (align_mode_r && pop) begin
+                        // Reset the byte budget at each neuron boundary; otherwise
+                        // carry the remaining bytes into the next aligned beat.
+                        if (aligned_out_last) begin
+                            align_mode_r <= 1'b0;
+                            aligned_bytes_per_neuron_r <= '0;
+                            bytes_left_in_neuron_r <= '0;
+                        end else if (aligned_bytes_emitted == bytes_left_in_neuron_r) begin
+                            bytes_left_in_neuron_r <= aligned_bytes_per_neuron_r;
+                        end else begin
+                            bytes_left_in_neuron_r <= bytes_left_in_neuron_r - 16'(aligned_bytes_emitted);
+                        end
+                    end else if (!align_mode_r && pop && shift_out_last) begin
+                        aligned_bytes_per_neuron_r <= '0;
+                        bytes_left_in_neuron_r <= '0;
+                    end
                 end
             end
         end
