@@ -314,7 +314,7 @@ module bnn_fcc #(
     );
 
 //------------------------------------------------------------------------------
-// Seralize Image Data and Feed into Layer 0
+// Seralize Image Data, Feed into FIFO, FIFO feeds Layer 0
 //------------------------------------------------------------------------------
 
     localparam int IMG_BEAT_W = IMG_CHUNKS * 2; // 8 bits
@@ -383,60 +383,6 @@ module bnn_fcc #(
         .img_last_out(img_last_out),
         .ready_out(1'b1)
     );
-
-    // might want to parameterize this for parallel input sizes
-    // might also want to make this it's own module so less logic is handled in the top level
-
-    // logic [PARALLEL_INPUTS-1:0] img_buffer [IMG_CHUNKS];
-    // logic [IMG_CHUNKS-1:0]      img_buf_valid; // this needs to be changed as img_data_out_valid is 4 bits, with the keeps already being handled
-    //                                            // this valid signal just says that as long as one of the 2 bytes is valid, to read it. anything that's zeroed out ignore. 
-    // logic                       img_buf_busy;  // how is this defined?
-    // logic [$clog2(IMG_CHUNKS)-1:0] img_idx;    
-
-    // // we can potentially reuse shift_reg.sv for this if necessary, so we can handle backstreaming
-    // // and pass in our own valid signals and stuff to make it parameterized. 
-    // always_ff @(posedge clk or posedge rst) begin
-    //     if(rst) begin
-    //         img_buf_valid <= '0;
-    //         img_buf_busy <= 1'b0;
-    //         img_idx <= '0;
-    //         img_buffer <= '{default: '0};
-
-    //         layer0_x <= '0;
-    //         layer0_valid_in <= 1'b0;
-    //     end
-    //     else begin
-    //         layer0_valid_in <= 1'b0;
-    //         // so we're splitting up the process of taking the
-    //         // image data from the data_in_manger and feeding it to layer 0 with a 
-    //         // small buffer in between. this could be handled with a small fifo potentially. 
-
-    //         if(!img_buf_busy && (|img_data_out_valid)) begin
-    //             for(int i = 0; i < IMG_CHUNKS; i++) begin
-    //                 img_buffer[i] <= img_data_out[i];
-    //                 img_buf_valid[i] <= img_data_out_valid[i];
-    //             end
-    //             img_buf_busy <= 1'b1;
-    //             img_idx <= '0;
-    //         end
-    //         // this increments img_buffer to 1, 2, 3, 0 to reuse the entirety of the buffer
-    //         // this asynchronous fifo implementation was recommended by stitt and i like it a lot
-    //         // i'm just worried about code complexity mainly, and bugs from having logic in main and not being repeatable
-    //         // worried about this "busy" state as data is being streamed every second and this might
-    //         // bottleneck the design. data_in_manager already has a fifo inside it to handle streaming, so as long as
-    //         // the neurons can accept data every clock cycle, this might not be necessary
-    //         // we can employ the standard next = _r format for 2 process implemetnations and refactor this if
-    //         // we choose to keep it
-    //         else if(img_buf_busy) begin 
-    //             layer0_x <= img_buffer[img_idx];
-    //             layer0_valid_in <= img_buf_valid[img_idx];
-    //             img_idx <= img_idx + 1;
-    //             if(img_idx == IMG_CHUNKS - 1) begin
-    //                 img_buf_busy <= 1'b0;
-    //             end
-    //         end
-    //     end
-    // end
 
 //------------------------------------------------------------------------------
 // Seralize Layer 0 Output and Feed into Layer 1
