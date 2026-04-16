@@ -279,6 +279,8 @@ module bnn_fcc_16 #(
     logic [PARALLEL_INPUTS-1:0] layer2_x; // image data
     logic layer2_valid_in; // valid
 
+    logic layer2_last_in;
+
     // questions:
         // how many neurons are being instantiated?
         // how is data being streamed to all the neurons?
@@ -306,7 +308,7 @@ module bnn_fcc_16 #(
         .cfg_t_addr_np(l2_cfg_t_addr_np),
         .cfg_t_data_np(l2_cfg_t_data_np),
 
-        .image_last(l1_last_img_out[0]),
+        .image_last(layer2_last_in),
 
         .y(l2_y),
         .popcount(l2_popcount),
@@ -477,7 +479,6 @@ module bnn_fcc_16 #(
     logic [$clog2(PARALLEL_INPUTS / PN1)-1:0] l12_buf_idx; // index to keep track of where we are writing in the buffer
 
     logic l12_last_pending;
-    logic layer2_last_in;
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
