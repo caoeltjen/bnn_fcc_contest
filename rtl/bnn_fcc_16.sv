@@ -553,6 +553,8 @@ module bnn_fcc_16 #(
     logic [$clog2(TOPOLOGY[3]+1)-1:0] final_scores_idx; // index to keep track of where we are writing in the buffer
     logic final_scores_full; // flag to see when buffer is full
 
+    logic [PN2-1:0] final_seen;
+
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
             final_scores_full <= 1'b0;
@@ -560,27 +562,22 @@ module bnn_fcc_16 #(
             final_scores <= '{default: '0};
         end
         else begin
-            int next_count;
-            next_count = final_scores_idx;
-
             if(data_out_valid && data_out_ready) begin
                 final_scores_full <= 1'b0; // reset full flag to start filling buffer again
-                final_scores_idx <= '0; // reset index
+                final_seen <= '0; // reset index
                 final_scores <= '{default: '0}; // clear buffer
             end
 
             if(!final_scores_full) begin // if the final scores list is not full
                 for(int i = 0; i < PN2; i++) begin // increment through all the neuron processors
-                    if(l2_valid_out[i] && next_count < TOPOLOGY[3]) begin // if the output is valid and we have room in the buffer
-                        final_scores[next_count] <= l2_popcount[i]; // write outputs to the buffer
-                        next_count = next_count + 1; // increment count
+                    if(l2_valid_out[i]) begin // if the output is valid and we have room in the buffer
+                        final_scores[i] <= l2_popcount[i]; // write outputs to the buffer
+                        final_seen[i]   <= 1'b1;
                     end
                 end
 
-                final_scores_idx <= next_count;
-
-                if(next_count >= TOPOLOGY[3]) begin // if we get to past the size of the buffer
-                    final_scores_full <= 1'b1; // set full to 1
+                if (&final_seen) begin
+                    final_scores_full <= 1'b1;
                 end
             end
         end
