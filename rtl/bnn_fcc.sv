@@ -155,6 +155,8 @@ module bnn_fcc #(
     logic [PARALLEL_INPUTS-1:0] layer0_x; // image data
     logic layer0_valid_in; // valid
 
+    logic img_last_out;
+
     // questions:
         // how many neurons are being instantiated?
         // how is data being streamed to all the neurons?
@@ -182,7 +184,7 @@ module bnn_fcc #(
         .cfg_t_addr_np(l0_cfg_t_addr_np),
         .cfg_t_data_np(l0_cfg_t_data_np),
 
-        .image_last(img_data_out_last),
+        .image_last(img_last_out),
 
         .y(l0_y),
         .popcount(l0_popcount),
@@ -319,6 +321,8 @@ module bnn_fcc #(
 
     logic [IMG_BEAT_W-1:0] img_l0_buf;
     logic                  img_l0_buf_valid;
+    logic [PARALLEL_INPUTS-1:0] img_to_fifo; // image data
+    logic img_to_fifo_valid; // valid
 
     logic [IMG_BEAT_W-1:0] packed_img_beat;
 
@@ -335,13 +339,13 @@ module bnn_fcc #(
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
-            img_l0_buf       <= '0;
-            img_l0_buf_valid <= 1'b0;
-            layer0_x         <= '0;
-            layer0_valid_in  <= 1'b0;
+            img_l0_buf        <= '0;
+            img_l0_buf_valid  <= 1'b0;
+            img_to_fifo       <= '0;
+            img_to_fifo_valid <= 1'b0;
         end
         else begin
-            layer0_valid_in <= 1'b0;
+            img_to_fifo_valid <= 1'b0;
 
             if (&img_data_out_valid) begin // if the data is valid (all of it)
                 if (!img_l0_buf_valid) begin // if buffer isnt in use
@@ -351,13 +355,34 @@ module bnn_fcc #(
                 end
                 else begin
                     // second packed 8-bit beat -> emit full 16-bit input
-                    layer0_x         <= {packed_img_beat, img_l0_buf}; // if it is valid pack the current and previous beats
-                    layer0_valid_in  <= 1'b1; // set valid in for layer 0
+                    img_to_fifo <= {packed_img_beat, img_l0_buf}; // if it is valid pack the current and previous beats
+                    img_to_fifo_valid <= 1'b1; // set valid in for layer 0
                     img_l0_buf_valid <= 1'b0; // reset buffer
                 end
             end
         end
     end
+
+    img_data_fifo #(
+        .WIDTH(PARALLEL_INPUTS),
+        .INPUTS(TOPOLOGY[0]),
+        .NUM_REPLAYS(TOPOLOGY[1] / PN0),
+        .DEPTH(49)
+    ) img_data_fifo_inst (
+        .clk(clk),
+        .rst(rst),
+
+        .data_in(img_to_fifo),
+        .valid_in(img_to_fifo_valid),
+        .img_data_last(img_data_out_last),
+        //doesnt need a connection rn but could be useful
+        .ready_in(), // this is a signal so we can monitor if the fifo is full from the outside
+
+        .data_out(layer0_x),
+        .valid_out(layer0_valid_in),
+        .img_last_out(img_last_out),
+        .ready_out(1'b1)
+    );
 
     // might want to parameterize this for parallel input sizes
     // might also want to make this it's own module so less logic is handled in the top level
