@@ -70,15 +70,15 @@ module data_in_manager#(
 
     for (genvar i = 0; i < INPUT_BUS_WIDTH/16; i++) begin
         binarize_input#(
-            .INPUT_DATA_WIDTH(INPUT_DATA_WIDTH),
-            .ALIGN_TO_BYTES_PER_NEURON(0) 
+            .INPUT_DATA_WIDTH(INPUT_DATA_WIDTH)
+            //.ALIGN_TO_BYTES_PER_NEURON(0) 
         ) binarizer_inst1 (
             .data_in(shift_out_data[i*16 +: 8]), // first pixel
             .data_out(img_data_out_next[i].pixel0)
         );
         binarize_input#(
-            .INPUT_DATA_WIDTH(INPUT_DATA_WIDTH),
-            .ALIGN_TO_BYTES_PER_NEURON(0)
+            .INPUT_DATA_WIDTH(INPUT_DATA_WIDTH)
+            //.ALIGN_TO_BYTES_PER_NEURON(0)
         ) binarizer_inst2 (
             .data_in(shift_out_data[i*16+8 +: 8]), // second pixel
             .data_out(img_data_out_next[i].pixel1)

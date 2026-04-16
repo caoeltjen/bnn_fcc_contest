@@ -648,7 +648,7 @@ module bnn_fcc #(
                 t_quarters <= 2'b00; // reset threshold upper half flag
             end
 
-            if(&cfg_payload_valid) begin // make sure 16 bits ready to write
+            else if(&cfg_payload_valid) begin // make sure 16 bits ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     if(active_is_weight) begin // if we are writing weights
                         l0_cfg_w_np_sel <= l0_w_np_count;
