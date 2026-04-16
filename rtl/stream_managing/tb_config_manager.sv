@@ -154,6 +154,80 @@ module tb_config_manager #(
         end
     endtask
 
+    task automatic build_stream_with_payload_keeps(
+        input header_t header,
+        input bit [7:0] payload_bytes[],
+        input keep_t payload_keeps[],
+        output bus_word_t beats[],
+        output keep_t keeps[]
+    );
+        bus_word_t beat_q[$];
+        keep_t keep_q[$];
+        bus_word_t current_word;
+        keep_t current_keep;
+        int payload_idx;
+        int beat_bytes;
+
+        current_word = '0;
+        current_word[7:0] = header.msg_type;
+        current_word[15:8] = header.layer_id;
+        current_word[31:16] = header.layer_inputs;
+        current_word[47:32] = header.num_neurons;
+        current_word[63:48] = header.bytes_per_neuron;
+        beat_q.push_back(current_word);
+        keep_q.push_back('1);
+
+        current_word = '0;
+        current_word[31:0] = header.total_bytes;
+        current_word[63:32] = header.reserved;
+        beat_q.push_back(current_word);
+        keep_q.push_back('1);
+
+        payload_idx = 0;
+        foreach (payload_keeps[beat]) begin
+            current_word = '0;
+            for (int lane = 0; lane < BYTE_LANES; lane++) begin
+                if (payload_keeps[beat][lane]) begin
+                    if (payload_idx >= payload_bytes.size()) begin
+                        $fatal(1, "Directed payload keep pattern over-consumed payload bytes");
+                    end
+                    current_word[lane*8 +: 8] = payload_bytes[payload_idx];
+                    payload_idx++;
+                end
+            end
+            beat_q.push_back(current_word);
+            keep_q.push_back(payload_keeps[beat]);
+        end
+
+        // The directed keep pattern only needs to describe the interesting
+        // leading beats. If payload bytes remain, append additional beats so the
+        // message still carries the full payload declared in the header.
+        while (payload_idx < payload_bytes.size()) begin
+            current_word = '0;
+            current_keep = '0;
+            beat_bytes = payload_bytes.size() - payload_idx;
+            if (beat_bytes > BYTE_LANES) begin
+                beat_bytes = BYTE_LANES;
+            end
+
+            for (int lane = 0; lane < beat_bytes; lane++) begin
+                current_word[lane*8 +: 8] = payload_bytes[payload_idx + lane];
+                current_keep[lane] = 1'b1;
+            end
+
+            beat_q.push_back(current_word);
+            keep_q.push_back(current_keep);
+            payload_idx += beat_bytes;
+        end
+
+        beats = new[beat_q.size()];
+        keeps = new[keep_q.size()];
+        foreach (beat_q[i]) begin
+            beats[i] = beat_q[i];
+            keeps[i] = keep_q[i];
+        end
+    endtask
+
     task automatic build_expected_output_beats(
         input header_t header,
         input bit [7:0] payload_bytes[],
@@ -332,9 +406,12 @@ module tb_config_manager #(
         end
     endtask
 
-    task automatic run_test(input int test_id);
-        header_t expected_header;
-        bit [7:0] expected_payload[];
+    task automatic run_case(
+        input int test_id,
+        input header_t expected_header,
+        input bit [7:0] expected_payload[],
+        input keep_t payload_keeps[]
+    );
         bus_word_t beats[];
         keep_t keeps[];
         bus_word_t expected_output_beats[];
@@ -345,10 +422,13 @@ module tb_config_manager #(
         bit test_failed;
 
         current_test_id = test_id;
-        make_random_item(expected_header, expected_payload);
-        build_stream(expected_header, expected_payload, beats, keeps);
+        if (payload_keeps.size() == 0) begin
+            build_stream(expected_header, expected_payload, beats, keeps);
+        end else begin
+            build_stream_with_payload_keeps(expected_header, expected_payload, payload_keeps, beats, keeps);
+        end
         build_expected_output_beats(expected_header, expected_payload, beats, keeps,
-                        expected_output_beats, expected_output_keeps);
+                                    expected_output_beats, expected_output_keeps);
 
         expected_beat_idx = 0;
         drain_cycles = 0;
@@ -378,11 +458,11 @@ module tb_config_manager #(
         @(negedge clk);
         drive_idle();
 
-          while ((expected_beat_idx != expected_output_beats.size()) &&
-            (drain_cycles < (expected_output_beats.size() + int'(expected_header.num_neurons) + 8))) begin
+        while ((expected_beat_idx != expected_output_beats.size()) &&
+               (drain_cycles < (expected_output_beats.size() + int'(expected_header.num_neurons) + 8))) begin
             @(posedge clk);
-                check_outputs(expected_header, expected_output_beats, expected_output_keeps,
-                                  test_id, expected_beat_idx,
+            check_outputs(expected_header, expected_output_beats, expected_output_keeps,
+                          test_id, expected_beat_idx,
                           header_checked, test_failed);
             drain_cycles++;
         end
@@ -412,6 +492,77 @@ module tb_config_manager #(
         end
     endtask
 
+    task automatic run_directed_tests();
+        header_t directed_header;
+        bit [7:0] directed_payload[];
+        keep_t directed_keeps[];
+
+        directed_header = '0;
+        directed_header.msg_type = 8'd0;
+        directed_header.layer_id = 8'd0;
+        directed_header.layer_inputs = 16'd96;
+        directed_header.num_neurons = 16'd2;
+        directed_header.bytes_per_neuron = 16'd12;
+        directed_header.total_bytes = 32'd24;
+        directed_header.reserved = 32'd0;
+        directed_payload = new[24];
+        foreach (directed_payload[i]) begin
+            directed_payload[i] = 8'(i);
+        end
+        directed_keeps = new[3];
+        directed_keeps[0] = 8'hFF;
+        directed_keeps[1] = 8'hFF;
+        directed_keeps[2] = 8'h0F;
+        run_case(1000, directed_header, directed_payload, directed_keeps);
+
+        directed_header = '0;
+        directed_header.msg_type = 8'd0;
+        directed_header.layer_id = 8'd1;
+        directed_header.layer_inputs = 16'd96;
+        directed_header.num_neurons = 16'd2;
+        directed_header.bytes_per_neuron = 16'd12;
+        directed_header.total_bytes = 32'd24;
+        directed_header.reserved = 32'd0;
+        directed_payload = new[24];
+        foreach (directed_payload[i]) begin
+            directed_payload[i] = 8'h80 ^ 8'(i);
+        end
+        directed_keeps = new[5];
+        directed_keeps[0] = 8'hFF;
+        directed_keeps[1] = 8'hF0;
+        directed_keeps[2] = 8'h0F;
+        directed_keeps[3] = 8'h3F;
+        directed_keeps[4] = 8'h03;
+        run_case(1001, directed_header, directed_payload, directed_keeps);
+
+        directed_header = '0;
+        directed_header.msg_type = 8'd1;
+        directed_header.layer_id = 8'd2;
+        directed_header.layer_inputs = 16'd256;
+        directed_header.num_neurons = 16'd4;
+        directed_header.bytes_per_neuron = 16'd4;
+        directed_header.total_bytes = 32'd16;
+        directed_header.reserved = 32'd0;
+        directed_payload = new[16];
+        foreach (directed_payload[i]) begin
+            directed_payload[i] = 8'h40 ^ 8'(i);
+        end
+        directed_keeps = new[2];
+        directed_keeps[0] = 8'hF0;
+        directed_keeps[1] = 8'h0F;
+        run_case(1002, directed_header, directed_payload, directed_keeps);
+    endtask
+
+    task automatic run_test(input int test_id);
+        header_t expected_header;
+        bit [7:0] expected_payload[];
+        keep_t payload_keeps[];
+
+        make_random_item(expected_header, expected_payload);
+        payload_keeps = new[0];
+        run_case(test_id, expected_header, expected_payload, payload_keeps);
+    endtask
+
     initial begin : test_runner
         rst <= 1'b1;
         drive_idle();
@@ -423,7 +574,7 @@ module tb_config_manager #(
         @(negedge clk);
         rst <= 1'b0;
 
-        // run_test(0); // run a single test for now to make sure everything is working, can increase NUM_TESTS and loop over multiple tests later
+        run_directed_tests();
         for (int test_id = 0; test_id < NUM_TESTS; test_id++) begin
             run_test(test_id);
         end

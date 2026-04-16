@@ -144,12 +144,15 @@ module shift_reg #(
             end
 
             always_comb begin
-                should_align_next = 1'b0;
+                should_align_next = align_mode_r;
                 next_bytes_per_neuron = aligned_bytes_per_neuron_r;
 
                 if (msg_type_valid) begin
-                    should_align_next = (msg_type == 8'd0) && bytes_per_neuron_valid && (bytes_per_neuron != 16'd0);
-                    if (bytes_per_neuron_valid && (bytes_per_neuron != 16'd0)) begin
+                    if (msg_type != 8'd0) begin
+                        should_align_next = 1'b0;
+                        next_bytes_per_neuron = '0;
+                    end else if (bytes_per_neuron_valid && (bytes_per_neuron != 16'd0)) begin
+                        should_align_next = 1'b1;
                         next_bytes_per_neuron = bytes_per_neuron;
                     end
                 end
@@ -353,9 +356,12 @@ module shift_reg #(
                     end
                     count <= COUNT_W'(next_count);
 
-                    if (msg_type_valid) begin
-                        // A new header selects whether the following payload uses
-                        // neuron-aligned packing or plain beat streaming.
+                    if (msg_type_valid && ((msg_type != 8'd0) || bytes_per_neuron_valid)) begin
+                        // Only treat header information as a mode change when a
+                        // non-weight message is selected or a new bytes-per-neuron
+                        // value is provided. During weight payload streaming,
+                        // config_manager keeps msg_type_valid asserted, but that
+                        // should not reset the byte-alignment state each cycle.
                         align_mode_r <= should_align_next;
                         if (should_align_next) begin
                             aligned_bytes_per_neuron_r <= next_bytes_per_neuron;
