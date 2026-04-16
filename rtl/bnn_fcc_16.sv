@@ -529,7 +529,7 @@ module bnn_fcc_16 #(
         .INPUTS(TOPOLOGY[2]),
         .NUM_REPLAYS(TOPOLOGY[3] / PN2),
         .DEPTH(2)
-    ) img_data_fifo_inst1 (
+    ) img_data_fifo_inst2 (
         .clk(clk),
         .rst(rst),
 
