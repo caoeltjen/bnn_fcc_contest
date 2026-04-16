@@ -800,6 +800,8 @@ module bnn_fcc_16 #(
 
                             l0_cfg_t_data_np[10] <= t0;
                             l0_cfg_t_data_np[11] <= t1;
+
+                            t_eights <= t_eights + 1'b1;
                         end
                         else if (t_eights == 4'b110) begin
                             l0_cfg_t_we_np[12]   <= 1'b1;
@@ -935,7 +937,7 @@ module bnn_fcc_16 #(
                         end
                         else if (t_eights == 4'b101) begin
                             l1_cfg_t_we_np[10]   <= 1'b1;
-                            l0_cfg_t_we_np[11]   <= 1'b1;
+                            l1_cfg_t_we_np[11]   <= 1'b1;
 
                             l1_cfg_t_addr_np[10] <= cfg_addr_count;
                             l1_cfg_t_addr_np[11] <= cfg_addr_count;
