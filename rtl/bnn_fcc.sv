@@ -217,6 +217,8 @@ module bnn_fcc #(
     logic [PARALLEL_INPUTS-1:0] layer1_x; // image data
     logic layer1_valid_in; // valid
 
+    logic l01_last_img_out;
+
     // questions:
         // how many neurons are being instantiated?
         // how is data being streamed to all the neurons?
@@ -244,7 +246,7 @@ module bnn_fcc #(
         .cfg_t_addr_np(l1_cfg_t_addr_np),
         .cfg_t_data_np(l1_cfg_t_data_np),
 
-        .image_last(l0_last_img_out[0]),
+        .image_last(l01_last_img_out),
 
         .y(l1_y),
         .popcount(l1_popcount),
@@ -372,7 +374,7 @@ module bnn_fcc #(
         .INPUTS(TOPOLOGY[0]),
         .NUM_REPLAYS(TOPOLOGY[1] / PN0),
         .DEPTH(50)
-    ) img_data_fifo_inst (
+    ) img_data_fifo_inst0 (
         .clk(clk),
         .rst(rst),
 
@@ -396,19 +398,22 @@ module bnn_fcc #(
     logic l01_buf_full; // flag to see when buffer is full
     logic [$clog2(PARALLEL_INPUTS / PN0)-1:0] l01_buf_idx; // index to keep track of where we are writing in the buffer
 
+    logic [PARALLEL_INPUTS-1:0] l01_data; // image data
+    logic l01_valid_in; // valid
+
     // this is fire
     // might neeed to make proper handshakes here but that's my only thing
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
             l01_buf <= '{default: '0}; // reset everything
-            layer1_x <= '0;
-            layer1_valid_in <= 1'b0;
+            l01_data <= '0;
+            l01_valid_in <= 1'b0;
             l01_buf_full <= 1'b0;
             l01_buf_idx <= '0;
         end
         else begin
-            layer1_valid_in <= 1'b0;
+            l01_valid_in <= 1'b0;
 
             if(l01_buf_full) begin // if the buffer is full
                 // hardcoded version
@@ -416,10 +421,10 @@ module bnn_fcc #(
 
                 // Generic version -- Assumes Parallel Inputs is divisible by your layer size (PN)
                 for (int i = 0; i < PARALLEL_INPUTS / PN0; i++) begin
-                    layer1_x[i*PN0 +: PN0] <= l01_buf[i];
+                    l01_data[i*PN0 +: PN0] <= l01_buf[i];
                 end
 
-                layer1_valid_in <= 1'b1; // set valid signal
+                l01_valid_in <= 1'b1; // set valid signal
                 l01_buf_full <= 1'b0; // set full to 0
             end
             else if(&l0_valid_out) begin // if the buffer isnt full and the outputs on the previous layer are valid
@@ -433,6 +438,27 @@ module bnn_fcc #(
             end
         end
     end
+
+    img_data_fifo #(
+        .WIDTH(PARALLEL_INPUTS),
+        .INPUTS(TOPOLOGY[1]),
+        .NUM_REPLAYS(TOPOLOGY[2] / PN1),
+        .DEPTH(50)
+    ) img_data_fifo_inst1 (
+        .clk(clk),
+        .rst(rst),
+
+        .data_in(l01_data),
+        .valid_in(l01_valid_in),
+        .img_data_last(l0_last_img_out[0]),
+        //doesnt need a connection rn but could be useful
+        .ready_in(), // this is a signal so we can monitor if the fifo is full from the outside
+
+        .data_out(layer1_x),
+        .valid_out(layer1_valid_in),
+        .img_last_out(l01_last_img_out),
+        .ready_out(1'b1)
+    );
 
 //------------------------------------------------------------------------------
 // Seralize Layer 1 Output and Feed into Layer 2
