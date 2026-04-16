@@ -1,4 +1,4 @@
-module bnn_fcc_large #(
+module bnn_fcc_16 #(
     parameter int INPUT_DATA_WIDTH  = 8,
     parameter int INPUT_BUS_WIDTH   = 64,
     parameter int CONFIG_BUS_WIDTH  = 64,
