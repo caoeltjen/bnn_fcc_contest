@@ -115,7 +115,7 @@ module bnn_fcc_tb #(
     // DUT configuration (can be modified or extended for your own DUT)        
     localparam int NON_INPUT_LAYERS = USE_CUSTOM_TOPOLOGY ? CUSTOM_LAYERS - 1 : TRAINED_LAYERS - 1,
     parameter int PARALLEL_INPUTS = 16,
-    parameter int PARALLEL_NEURONS[NON_INPUT_LAYERS] = '{8, 8, 10}
+    parameter int PARALLEL_NEURONS[NON_INPUT_LAYERS] = '{16, 16, 10}
 );
     import bnn_fcc_tb_pkg::*;
 
