@@ -279,7 +279,7 @@ module bnn_fcc_16 #(
     logic [PARALLEL_INPUTS-1:0] layer2_x; // image data
     logic layer2_valid_in; // valid
 
-    logic layer2_last_in;
+    logic l12_last_img_out;
 
     // questions:
         // how many neurons are being instantiated?
@@ -308,7 +308,7 @@ module bnn_fcc_16 #(
         .cfg_t_addr_np(l2_cfg_t_addr_np),
         .cfg_t_data_np(l2_cfg_t_data_np),
 
-        .image_last(layer2_last_in),
+        .image_last(l12_last_img_out),
 
         .y(l2_y),
         .popcount(l2_popcount),
@@ -453,7 +453,7 @@ module bnn_fcc_16 #(
         .WIDTH(PARALLEL_INPUTS),
         .INPUTS(TOPOLOGY[1]),
         .NUM_REPLAYS(TOPOLOGY[2] / PN1),
-        .DEPTH(50)
+        .DEPTH(3)
     ) img_data_fifo_inst1 (
         .clk(clk),
         .rst(rst),
@@ -478,22 +478,27 @@ module bnn_fcc_16 #(
     logic l12_buf_full; // flag to see when buffer is full
     logic [$clog2(PARALLEL_INPUTS / PN1)-1:0] l12_buf_idx; // index to keep track of where we are writing in the buffer
 
-    logic l12_last_pending;
+    logic [PARALLEL_INPUTS-1:0] l12_data; // image data
+    logic l12_valid_in; // valid
+
+    logic l12_last_image_r1, l12_last_image_r2;
 
     always_ff @(posedge clk or posedge rst) begin
         if(rst) begin
             l12_buf <= '{default: '0}; // reset everything
-            layer2_x <= '0;
-            layer2_valid_in <= 1'b0;
+            l12_data <= '0;
+            l12_valid_in <= 1'b0;
             l12_buf_full <= 1'b0;
             l12_buf_idx <= '0;
 
-            l12_last_pending <= 1'b0;
-            layer2_last_in   <= 1'b0;
+            l12_last_image_r1 <= 1'b0;
+            l12_last_image_r2 <= 1'b0;
         end
         else begin
             layer2_valid_in <= 1'b0;
-            layer2_last_in <= 1'b0;
+
+            l12_last_image_r1 <= l1_last_img_out[0];
+            l12_last_image_r2 <= l12_last_image_r1;
 
             if(l12_buf_full) begin // if the buffer is full
                 // hardcoded version
@@ -506,17 +511,10 @@ module bnn_fcc_16 #(
 
                 layer2_valid_in <= 1'b1; // set valid signal
                 l12_buf_full <= 1'b0; // set full to 0
-
-                layer2_last_in  <= l12_last_pending;
-                l12_last_pending <= 1'b0;
             end
             else if(&l1_valid_out) begin // if the buffer isnt full and the outputs on the previous layer are valid
                 l12_buf[l12_buf_idx] <= l1_y; // write outputs to the buffer
                 l12_buf_idx <= l12_buf_idx + 1; // incremenet index
-
-                if (&l1_last_img_out) begin
-                    l12_last_pending <= 1'b1;
-                end
 
                 if(l12_buf_idx == (PARALLEL_INPUTS / PN1) - 1) begin // if we are at the end of the buffer
                     l12_buf_full <= 1'b1; // set full to 1
@@ -525,6 +523,27 @@ module bnn_fcc_16 #(
             end
         end
     end
+
+    img_data_fifo #(
+        .WIDTH(PARALLEL_INPUTS),
+        .INPUTS(TOPOLOGY[2]),
+        .NUM_REPLAYS(TOPOLOGY[3] / PN2),
+        .DEPTH(2)
+    ) img_data_fifo_inst1 (
+        .clk(clk),
+        .rst(rst),
+
+        .data_in(l12_data),
+        .valid_in(l12_valid_in),
+        .img_data_last(l12_last_image_r2),
+        //doesnt need a connection rn but could be useful
+        .ready_in(), // this is a signal so we can monitor if the fifo is full from the outside
+
+        .data_out(layer2_x),
+        .valid_out(layer2_valid_in),
+        .img_last_out(l12_last_img_out),
+        .ready_out(1'b1)
+    );
 
 //------------------------------------------------------------------------------
 // Capture Layer 2 Outputs
