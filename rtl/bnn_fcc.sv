@@ -401,6 +401,8 @@ module bnn_fcc #(
     logic [PARALLEL_INPUTS-1:0] l01_data; // image data
     logic l01_valid_in; // valid
 
+    logic l01_last_image_r1, l01_last_image_r2;
+
     // this is fire
     // might neeed to make proper handshakes here but that's my only thing
 
@@ -411,9 +413,15 @@ module bnn_fcc #(
             l01_valid_in <= 1'b0;
             l01_buf_full <= 1'b0;
             l01_buf_idx <= '0;
+
+            l01_last_image_r1 <= 1'b0;
+            l01_last_image_r2 <= 1'b0;
         end
         else begin
             l01_valid_in <= 1'b0;
+
+            l01_last_image_r1 <= l0_last_img_out[0];
+            l01_last_image_r2 <= l01_last_image_r1;
 
             if(l01_buf_full) begin // if the buffer is full
                 // hardcoded version
@@ -450,7 +458,7 @@ module bnn_fcc #(
 
         .data_in(l01_data),
         .valid_in(l01_valid_in),
-        .img_data_last(l0_last_img_out[0]),
+        .img_data_last(l01_last_image_r2),
         //doesnt need a connection rn but could be useful
         .ready_in(), // this is a signal so we can monitor if the fifo is full from the outside
 
