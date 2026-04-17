@@ -80,7 +80,7 @@ module layer_bank #(
                 .rst        (rst),
 
                 .x          (x),
-                .valid_in   (valid_in & np_active[i]),
+                .valid_in   (valid_in),
 
                 .image_last (image_last),
 
