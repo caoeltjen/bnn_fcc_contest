@@ -74,7 +74,7 @@ module config_manager #(
     // shift register to read in data for header parsing and payload storage
     shift_reg #(
         .WIDTH(BUS_WIDTH),
-        .DEPTH(3),
+        .DEPTH(50),
         .ALIGN_TO_BYTES_PER_NEURON(1'b1)
     ) header_shift_reg (
         .clk(clk),

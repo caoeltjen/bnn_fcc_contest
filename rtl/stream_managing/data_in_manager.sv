@@ -52,7 +52,7 @@ module data_in_manager#(
     logic shift_out_ready;
     shift_reg #(
         .WIDTH(INPUT_BUS_WIDTH),
-        .DEPTH(3) // just a number so stuff can be streamed in
+        .DEPTH(50) // just a number so stuff can be streamed in
     ) shift_reg_inst (
         .clk(clk),
         .rst(rst),
