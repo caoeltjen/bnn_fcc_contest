@@ -290,28 +290,68 @@ module tb_shift_reg #(
         input int test_id,
         input beat_t expected[]
     );
+        int gap_cycles[];
+
+        gap_cycles = new[0];
+        run_plain_stream_with_gaps(test_id, expected, gap_cycles);
+    endtask
+
+    task automatic run_plain_stream_with_gaps(
+        input int test_id,
+        input beat_t expected[],
+        input int gap_cycles[]
+    );
         bit test_failed;
         int unsigned observed;
         int unsigned drain_cycles;
+        beat_t held_beat;
+        int gap_count;
 
         test_failed = 1'b0;
         observed = 0;
         drain_cycles = 0;
+        held_beat = '{default: '0};
 
         reset_duts();
 
         for (int beat = 0; beat < expected.size(); beat++) begin
+            gap_count = (beat < gap_cycles.size()) ? gap_cycles[beat] : 0;
+
+            repeat (gap_count) begin
+                @(negedge clk);
+                plain_shift_in_valid <= 1'b0;
+                plain_shift_in_data <= held_beat.data;
+                plain_shift_in_keep <= held_beat.keep;
+                plain_shift_in_last <= held_beat.last;
+
+                @(posedge clk);
+                if (plain_shift_out_valid) begin
+                    check_plain_beat(test_id, observed, expected[observed], test_failed);
+                    observed++;
+                end
+            end
+
             @(negedge clk);
             plain_shift_in_valid <= 1'b1;
             plain_shift_in_data <= expected[beat].data;
             plain_shift_in_keep <= expected[beat].keep;
             plain_shift_in_last <= expected[beat].last;
 
-            @(posedge clk);
+            while (!plain_shift_in_ready) begin
+                @(posedge clk);
+                if (plain_shift_out_valid) begin
+                    check_plain_beat(test_id, observed, expected[observed], test_failed);
+                    observed++;
+                end
+            end
+
+            @(posedge clk iff plain_shift_in_ready);
             if (plain_shift_out_valid) begin
                 check_plain_beat(test_id, observed, expected[observed], test_failed);
                 observed++;
             end
+
+            held_beat = expected[beat];
         end
 
         @(negedge clk);
@@ -509,17 +549,54 @@ module tb_shift_reg #(
         input logic [7:0] msg_type,
         input logic [15:0] bytes_per_neuron_cfg
     );
+        int gap_cycles[];
+
+        gap_cycles = new[0];
+        run_aligned_stream_with_gaps(test_id, input_beats, expected, msg_type, bytes_per_neuron_cfg, gap_cycles);
+    endtask
+
+    task automatic run_aligned_stream_with_gaps(
+        input int test_id,
+        input beat_t input_beats[],
+        input beat_t expected[] ,
+        input logic [7:0] msg_type,
+        input logic [15:0] bytes_per_neuron_cfg,
+        input int gap_cycles[]
+    );
         bit test_failed;
         int unsigned observed;
         int unsigned drain_cycles;
+        beat_t held_beat;
+        int gap_count;
 
         test_failed = 1'b0;
         observed = 0;
         drain_cycles = 0;
+        held_beat = '{default: '0};
 
         reset_duts();
 
         for (int beat = 0; beat < input_beats.size(); beat++) begin
+            gap_count = (beat < gap_cycles.size()) ? gap_cycles[beat] : 0;
+
+            repeat (gap_count) begin
+                @(negedge clk);
+                aligned_shift_in_valid <= 1'b0;
+                aligned_shift_in_data <= held_beat.data;
+                aligned_shift_in_keep <= held_beat.keep;
+                aligned_shift_in_last <= held_beat.last;
+                aligned_msg_type <= msg_type;
+                aligned_msg_type_valid <= 1'b0;
+                aligned_bytes_per_neuron <= bytes_per_neuron_cfg;
+                aligned_bytes_per_neuron_valid <= 1'b0;
+
+                @(posedge clk);
+                if (aligned_shift_out_valid) begin
+                    check_aligned_beat(test_id, observed, expected[observed], test_failed);
+                    observed++;
+                end
+            end
+
             @(negedge clk);
             aligned_shift_in_valid <= 1'b1;
             aligned_shift_in_data <= input_beats[beat].data;
@@ -530,11 +607,21 @@ module tb_shift_reg #(
             aligned_bytes_per_neuron <= bytes_per_neuron_cfg;
             aligned_bytes_per_neuron_valid <= (beat == 0) && (msg_type == 8'd0);
 
-            @(posedge clk);
+            while (!aligned_shift_in_ready) begin
+                @(posedge clk);
+                if (aligned_shift_out_valid) begin
+                    check_aligned_beat(test_id, observed, expected[observed], test_failed);
+                    observed++;
+                end
+            end
+
+            @(posedge clk iff aligned_shift_in_ready);
             if (aligned_shift_out_valid) begin
                 check_aligned_beat(test_id, observed, expected[observed], test_failed);
                 observed++;
             end
+
+            held_beat = input_beats[beat];
         end
 
         @(negedge clk);
@@ -595,6 +682,28 @@ module tb_shift_reg #(
             last: 1'b1
         };
         run_plain_stream(0, expected);
+    endtask
+
+    task automatic run_plain_gap_case();
+        beat_t expected[];
+        int gap_cycles[];
+
+        expected = new[2];
+        expected[0] = '{
+            data: 64'h8877665544332211,
+            keep: 8'hFF,
+            last: 1'b0
+        };
+        expected[1] = '{
+            data: 64'h0000D4C3B2A100EF,
+            keep: 8'h3F,
+            last: 1'b1
+        };
+
+        gap_cycles = new[2];
+        gap_cycles[0] = 0;
+        gap_cycles[1] = 3;
+        run_plain_stream_with_gaps(10, expected, gap_cycles);
     endtask
 
     task automatic run_aligned_weight_case();
@@ -668,6 +777,48 @@ module tb_shift_reg #(
         run_aligned_stream(2, input_beats, expected, msg_type, bytes_per_neuron_cfg);
     endtask
 
+    task automatic run_aligned_gap_case();
+        beat_t input_beats[];
+        beat_t expected[];
+        int gap_cycles[];
+        logic [7:0] msg_type;
+        logic [15:0] bytes_per_neuron_cfg;
+
+        expected = new[6];
+        input_beats = new[5];
+        gap_cycles = new[5];
+        msg_type = 8'd0;
+        bytes_per_neuron_cfg = 16'd12;
+
+        input_beats[0] = '{
+            data: make_header_word0(8'd0, 8'd3, 16'd96, 16'd2, 16'd12),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[1] = '{
+            data: make_header_word1(32'd24, 32'h55AA1234),
+            keep: '1,
+            last: 1'b0
+        };
+        input_beats[2] = '{data: pack_by_keep(8'hFF, 0, 8'h20), keep: 8'hFF, last: 1'b0};
+        input_beats[3] = '{data: pack_by_keep(8'hF0, 8, 8'h20), keep: 8'hF0, last: 1'b0};
+        input_beats[4] = '{data: pack_by_keep(8'hFF, 12, 8'h20), keep: 8'hFF, last: 1'b1};
+
+        expected[0] = input_beats[0];
+        expected[1] = input_beats[1];
+        expected[2] = '{data: pack_low_lanes(0, 8, 8'h20), keep: 8'hFF, last: 1'b0};
+        expected[3] = '{data: pack_low_lanes(8, 4, 8'h20), keep: 8'h0F, last: 1'b0};
+        expected[4] = '{data: pack_low_lanes(12, 8, 8'h20), keep: 8'hFF, last: 1'b0};
+        expected[5] = '{data: pack_low_lanes(20, 4, 8'h20), keep: 8'h0F, last: 1'b1};
+
+        gap_cycles[0] = 0;
+        gap_cycles[1] = 2;
+        gap_cycles[2] = 1;
+        gap_cycles[3] = 3;
+        gap_cycles[4] = 2;
+        run_aligned_stream_with_gaps(11, input_beats, expected, msg_type, bytes_per_neuron_cfg, gap_cycles);
+    endtask
+
     initial begin : test_runner
         rst <= 1'b1;
         plain_shift_out_ready <= 1'b1;
@@ -681,8 +832,10 @@ module tb_shift_reg #(
         rst <= 1'b0;
 
         run_plain_case();
+        run_plain_gap_case();
         run_aligned_weight_case();
         run_aligned_passthrough_case();
+        run_aligned_gap_case();
         run_random_tests(NUM_RANDOM_TESTS);
 
         $display("Tests completed at time=%0t: %0d passed, %0d failed", $time, passed, failed);

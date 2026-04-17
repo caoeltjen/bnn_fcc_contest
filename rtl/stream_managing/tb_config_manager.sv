@@ -412,12 +412,29 @@ module tb_config_manager #(
         input bit [7:0] expected_payload[],
         input keep_t payload_keeps[]
     );
+        int gap_cycles[];
+
+        gap_cycles = new[0];
+        run_case_with_gaps(test_id, expected_header, expected_payload, payload_keeps, gap_cycles);
+    endtask
+
+    task automatic run_case_with_gaps(
+        input int test_id,
+        input header_t expected_header,
+        input bit [7:0] expected_payload[],
+        input keep_t payload_keeps[],
+        input int gap_cycles[]
+    );
         bus_word_t beats[];
         keep_t keeps[];
         bus_word_t expected_output_beats[];
         keep_t expected_output_keeps[];
         int unsigned expected_beat_idx;
         int unsigned drain_cycles;
+        bus_word_t held_data;
+        keep_t held_keep;
+        logic held_last;
+        int gap_count;
         bit header_checked;
         bit test_failed;
 
@@ -434,8 +451,26 @@ module tb_config_manager #(
         drain_cycles = 0;
         header_checked = 1'b0;
         test_failed = 1'b0;
+        held_data = '0;
+        held_keep = '0;
+        held_last = 1'b0;
 
         for (int beat = 0; beat < beats.size(); beat++) begin
+            gap_count = (beat < gap_cycles.size()) ? gap_cycles[beat] : 0;
+
+            repeat (gap_count) begin
+                @(negedge clk);
+                config_valid <= 1'b0;
+                config_data_in <= held_data;
+                config_keep <= held_keep;
+                config_last <= held_last;
+
+                @(posedge clk);
+                check_outputs(expected_header, expected_output_beats, expected_output_keeps,
+                              test_id, expected_beat_idx,
+                              header_checked, test_failed);
+            end
+
             @(negedge clk);
             config_valid <= 1'b1;
             config_data_in <= beats[beat];
@@ -453,6 +488,10 @@ module tb_config_manager #(
             check_outputs(expected_header, expected_output_beats, expected_output_keeps,
                           test_id, expected_beat_idx,
                           header_checked, test_failed);
+
+            held_data = beats[beat];
+            held_keep = keeps[beat];
+            held_last = (beat == beats.size() - 1);
         end
 
         @(negedge clk);
@@ -496,6 +535,7 @@ module tb_config_manager #(
         header_t directed_header;
         bit [7:0] directed_payload[];
         keep_t directed_keeps[];
+        int gap_cycles[];
 
         directed_header = '0;
         directed_header.msg_type = 8'd0;
@@ -551,6 +591,54 @@ module tb_config_manager #(
         directed_keeps[0] = 8'hF0;
         directed_keeps[1] = 8'h0F;
         run_case(1002, directed_header, directed_payload, directed_keeps);
+
+        directed_header = '0;
+        directed_header.msg_type = 8'd0;
+        directed_header.layer_id = 8'd3;
+        directed_header.layer_inputs = 16'd96;
+        directed_header.num_neurons = 16'd2;
+        directed_header.bytes_per_neuron = 16'd12;
+        directed_header.total_bytes = 32'd24;
+        directed_header.reserved = 32'h55AA1234;
+        directed_payload = new[24];
+        foreach (directed_payload[i]) begin
+            directed_payload[i] = 8'hA0 + 8'(i);
+        end
+        directed_keeps = new[3];
+        directed_keeps[0] = 8'hFF;
+        directed_keeps[1] = 8'hF0;
+        directed_keeps[2] = 8'hFF;
+        gap_cycles = new[5];
+        gap_cycles[0] = 0;
+        gap_cycles[1] = 2;
+        gap_cycles[2] = 3;
+        gap_cycles[3] = 1;
+        gap_cycles[4] = 2;
+        run_case_with_gaps(1003, directed_header, directed_payload, directed_keeps, gap_cycles);
+
+        directed_header = '0;
+        directed_header.msg_type = 8'd1;
+        directed_header.layer_id = 8'd4;
+        directed_header.layer_inputs = 16'd128;
+        directed_header.num_neurons = 16'd4;
+        directed_header.bytes_per_neuron = 16'd4;
+        directed_header.total_bytes = 32'd16;
+        directed_header.reserved = 32'hAA5500FF;
+        directed_payload = new[16];
+        foreach (directed_payload[i]) begin
+            directed_payload[i] = 8'h30 + 8'(i);
+        end
+        directed_keeps = new[3];
+        directed_keeps[0] = 8'h33;
+        directed_keeps[1] = 8'hF0;
+        directed_keeps[2] = 8'h0F;
+        gap_cycles = new[5];
+        gap_cycles[0] = 0;
+        gap_cycles[1] = 1;
+        gap_cycles[2] = 2;
+        gap_cycles[3] = 2;
+        gap_cycles[4] = 1;
+        run_case_with_gaps(1004, directed_header, directed_payload, directed_keeps, gap_cycles);
     endtask
 
     task automatic run_test(input int test_id);

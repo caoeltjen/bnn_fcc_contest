@@ -84,18 +84,18 @@
 
 module bnn_fcc_tb #(
     // Testbench configuration
-    parameter int      USE_CUSTOM_TOPOLOGY                      = 1'b1,
+    parameter int      USE_CUSTOM_TOPOLOGY                      = 1'b0,
     parameter int      CUSTOM_LAYERS                            = 4,
     parameter int      CUSTOM_TOPOLOGY          [CUSTOM_LAYERS] = '{8, 8, 8, 10},
-    parameter int      NUM_TEST_IMAGES                          = 50,
+    parameter int      NUM_TEST_IMAGES                          = 100,
     parameter bit      VERIFY_MODEL                             = 1,
     parameter string   BASE_DIR                                 = "../python",
     parameter bit      TOGGLE_DATA_OUT_READY                    = 1'b1,
-    parameter real     CONFIG_VALID_PROBABILITY                 = 1,
+    parameter real     CONFIG_VALID_PROBABILITY                 = 0.8,
     parameter real     DATA_IN_VALID_PROBABILITY                = 1,
     parameter realtime TIMEOUT                                  = 10ms,
     parameter realtime CLK_PERIOD                               = 10ns,
-    parameter bit      DEBUG                                    = 1'b1,
+    parameter bit      DEBUG                                    = 1'b0,
 
     // Bus configuration
     parameter int CONFIG_BUS_WIDTH = 64,

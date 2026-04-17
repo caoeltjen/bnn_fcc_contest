@@ -238,7 +238,15 @@ module shift_reg #(
                 end
 
                 aligned_bytes_emitted = BYTES_W'(out_idx);
-                aligned_out_valid = (out_idx != 0);
+                // Only emit a beat when we have a full neuron-slice (out_idx == bytes_needed), OR
+                // when this is the very last beat of the message (all remaining FIFO bytes consumed).
+                // Without this guard, a gap in the config stream can drain the FIFO to just a few
+                // "remainder" bytes, causing a premature partial-beat emission. The config_manager
+                // would pop that beat and bnn_fcc_16 would increment cfg_addr_count, writing the
+                // rest of the neuron's bytes to the wrong BRAM address — silently corrupting weights.
+                aligned_out_valid = (out_idx != 0) &&
+                                    (out_idx >= bytes_needed ||
+                                     (message_last_seen && (total_valid_bytes == out_idx)));
                 // TLAST only leaves the module once every valid byte already in
                 // the FIFO has been consumed into this aligned output beat.
                 aligned_out_last = aligned_out_valid && message_last_seen && (total_valid_bytes == out_idx);
