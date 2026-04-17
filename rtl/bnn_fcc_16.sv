@@ -563,7 +563,7 @@ module bnn_fcc_16 #(
             int next_count;
             next_count = final_scores_idx;
 
-            if(data_out_valid && data_out_ready) begin
+            if(data_out_ready) begin
                 final_scores_full <= 1'b0; // reset full flag to start filling buffer again
                 final_scores_idx <= '0; // reset index
                 final_scores <= '{default: '0}; // clear buffer
@@ -720,22 +720,20 @@ module bnn_fcc_16 #(
                 t_eights <= 3'b000; // reset threshold upper half flag
             end
 
-            else if(&cfg_payload_valid) begin // make sure 16 bits ready to write
+            else if(|cfg_payload_valid) begin // make sure at least 1 bit is ready to write
                 if(active_layer_id == LAYER0) begin // check active layer amd assign write enables ready to rumble
                     if(active_is_weight) begin // if we are writing weights
                         l0_cfg_w_np_sel <= l0_w_np_count;
                         l0_cfg_w_addr <= cfg_addr_count;
                         l0_cfg_w_we <= 1'b1;
-                        l0_cfg_w_data <= {
-                            cfg_payload_bytes[7],
-                            cfg_payload_bytes[6],
-                            cfg_payload_bytes[5],
-                            cfg_payload_bytes[4],
-                            cfg_payload_bytes[3],
-                            cfg_payload_bytes[2],
-                            cfg_payload_bytes[1],
-                            cfg_payload_bytes[0]
-                        };
+                        for (int i = 0; i < 8; i++) begin
+                            if (cfg_payload_valid[i]) begin
+                                l0_cfg_w_data[i*8 +: 8] <= cfg_payload_bytes[i];
+                            end
+                            else begin
+                                l0_cfg_w_data[i*8 +: 8] <= 8'b0; // pad with zeros if not valid
+                            end
+                        end
 
                         l0_weight_counter <= l0_weight_counter + 1; // we increment the amount of weights we have written
                         cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
@@ -870,16 +868,14 @@ module bnn_fcc_16 #(
                         l1_cfg_w_np_sel <= l1_w_np_count;
                         l1_cfg_w_addr <= cfg_addr_count;
                         l1_cfg_w_we <= 1'b1;
-                        l1_cfg_w_data <= {
-                            cfg_payload_bytes[7],
-                            cfg_payload_bytes[6],
-                            cfg_payload_bytes[5],
-                            cfg_payload_bytes[4],
-                            cfg_payload_bytes[3],
-                            cfg_payload_bytes[2],
-                            cfg_payload_bytes[1],
-                            cfg_payload_bytes[0]
-                        };
+                        for (int i = 0; i < 8; i++) begin
+                            if (cfg_payload_valid[i]) begin
+                                l1_cfg_w_data[i*8 +: 8] <= cfg_payload_bytes[i];
+                            end
+                            else begin
+                                l1_cfg_w_data[i*8 +: 8] <= 8'b0; // pad with zeros if not valid
+                            end
+                        end
 
                         l1_weight_counter <= l1_weight_counter + 1; // we increment the amount of weights we have written
                         cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address
@@ -1014,16 +1010,14 @@ module bnn_fcc_16 #(
                         l2_cfg_w_np_sel <= l2_w_np_count;
                         l2_cfg_w_addr <= cfg_addr_count;
                         l2_cfg_w_we <= 1'b1;
-                        l2_cfg_w_data <= {
-                            cfg_payload_bytes[7],
-                            cfg_payload_bytes[6],
-                            cfg_payload_bytes[5],
-                            cfg_payload_bytes[4],
-                            cfg_payload_bytes[3],
-                            cfg_payload_bytes[2],
-                            cfg_payload_bytes[1],
-                            cfg_payload_bytes[0]
-                        };
+                        for (int i = 0; i < 8; i++) begin
+                            if (cfg_payload_valid[i]) begin
+                                l2_cfg_w_data[i*8 +: 8] <= cfg_payload_bytes[i];
+                            end
+                            else begin
+                                l2_cfg_w_data[i*8 +: 8] <= 8'b0; // pad with zeros if not valid
+                            end
+                        end
 
                         l2_weight_counter <= l2_weight_counter + 1; // we increment the amount of weights we have written
                         cfg_addr_count <= cfg_addr_count + 1; // we incrmenet the address

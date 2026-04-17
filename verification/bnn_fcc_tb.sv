@@ -86,8 +86,8 @@ module bnn_fcc_tb #(
     // Testbench configuration
     parameter int      USE_CUSTOM_TOPOLOGY                      = 1'b1,
     parameter int      CUSTOM_LAYERS                            = 4,
-    parameter int      CUSTOM_TOPOLOGY          [CUSTOM_LAYERS] = '{256, 256, 256, 10},
-    parameter int      NUM_TEST_IMAGES                          = 20,
+    parameter int      CUSTOM_TOPOLOGY          [CUSTOM_LAYERS] = '{8, 8, 8, 10},
+    parameter int      NUM_TEST_IMAGES                          = 50,
     parameter bit      VERIFY_MODEL                             = 1,
     parameter string   BASE_DIR                                 = "../python",
     parameter bit      TOGGLE_DATA_OUT_READY                    = 1'b1,
@@ -95,7 +95,7 @@ module bnn_fcc_tb #(
     parameter real     DATA_IN_VALID_PROBABILITY                = 1,
     parameter realtime TIMEOUT                                  = 10ms,
     parameter realtime CLK_PERIOD                               = 10ns,
-    parameter bit      DEBUG                                    = 1'b0,
+    parameter bit      DEBUG                                    = 1'b1,
 
     // Bus configuration
     parameter int CONFIG_BUS_WIDTH = 64,
@@ -444,7 +444,7 @@ module bnn_fcc_tb #(
         forever begin
             @(posedge clk iff data_out.tvalid && data_out.tready);
             assert (expected_outputs.size() > 0)
-            else $fatal(1, "No expected output for actual output");
+            else $fatal(1, "No expected output for actual output. Aka no outputs generated yet cuz data_out_valid asserted too early.");
             assert (data_out.tdata == expected_outputs[0]) begin
                 passed++;
             end else begin
