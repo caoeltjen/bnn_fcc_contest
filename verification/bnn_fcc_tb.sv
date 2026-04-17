@@ -182,7 +182,7 @@ module bnn_fcc_tb #(
         .aresetn(!rst)
     );
 
-    bnn_fcc_16 #(
+    bnn_fcc #(
         .INPUT_DATA_WIDTH (INPUT_DATA_WIDTH),
         .INPUT_BUS_WIDTH  (INPUT_BUS_WIDTH),
         .CONFIG_BUS_WIDTH (CONFIG_BUS_WIDTH),

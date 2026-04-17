@@ -14,6 +14,18 @@ files:
   # These are common to all projects.
   - ../rtl/bnn_fcc.sv
   - rtl/bnn_fcc_timing.sv
+  - ../rtl/layer_bank.sv
+  - ../rtl/img_data_fifo.sv
+  - ../rtl/binarize_input.sv
+  - ../rtl/stream_managing/config_manager.sv
+  - ../rtl/stream_managing/data_in_manager.sv
+  - ../rtl/stream_managing/shift_reg.sv
+  - ../rtl/neuron/neuron.sv
+  - ../rtl/neuron/neuron_cont.sv
+  - ../rtl/neuron/neuron_struct.sv
+  - ../rtl/neuron/neuron_top.sv
+  - ../rtl/neuron/neuron_top_cont.sv
+  - ../rtl/neuron/neuron_top_struct.sv
 
 parameters:
   INPUT_DATA_WIDTH: [8]
