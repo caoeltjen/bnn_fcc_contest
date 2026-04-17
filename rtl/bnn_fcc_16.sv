@@ -375,7 +375,7 @@ module bnn_fcc_16 #(
         .WIDTH(PARALLEL_INPUTS),
         .INPUTS(TOPOLOGY[0]),
         .NUM_REPLAYS(TOPOLOGY[1] / PN0),
-        .DEPTH(50)
+        .DEPTH(100)
     ) img_data_fifo_inst0 (
         .clk(clk),
         .rst(rst),
@@ -453,7 +453,7 @@ module bnn_fcc_16 #(
         .WIDTH(PARALLEL_INPUTS),
         .INPUTS(TOPOLOGY[1]),
         .NUM_REPLAYS(TOPOLOGY[2] / PN1),
-        .DEPTH(50)
+        .DEPTH(2) // Changed this and the next ones depth to lower so it doesnt take up so much space
     ) img_data_fifo_inst1 (
         .clk(clk),
         .rst(rst),
@@ -528,7 +528,7 @@ module bnn_fcc_16 #(
         .WIDTH(PARALLEL_INPUTS),
         .INPUTS(TOPOLOGY[2]),
         .NUM_REPLAYS(TOPOLOGY[3] / PN2),
-        .DEPTH(50)
+        .DEPTH(2)
     ) img_data_fifo_inst2 (
         .clk(clk),
         .rst(rst),

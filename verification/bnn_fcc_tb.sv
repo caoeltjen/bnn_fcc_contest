@@ -92,7 +92,7 @@ module bnn_fcc_tb #(
     parameter string   BASE_DIR                                 = "../python",
     parameter bit      TOGGLE_DATA_OUT_READY                    = 1'b1,
     parameter real     CONFIG_VALID_PROBABILITY                 = 0.8,
-    parameter real     DATA_IN_VALID_PROBABILITY                = 1,
+    parameter real     DATA_IN_VALID_PROBABILITY                = 0.8,
     parameter realtime TIMEOUT                                  = 10ms,
     parameter realtime CLK_PERIOD                               = 10ns,
     parameter bit      DEBUG                                    = 1'b0,
