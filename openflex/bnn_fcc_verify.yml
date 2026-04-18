@@ -15,6 +15,21 @@ files:
   - ../verification/axi4_stream_if.sv
   - ../verification/bnn_fcc_tb_pkg.sv
   - ../verification/bnn_fcc_tb.sv
+  - ../rtl/neuron/bram/threshold_bram.v
+  - ../rtl/neuron/bram/weight_bram.v
+  - ../rtl/neuron/bram/blk_mem_gen_v8_4.v
+  - ../rtl/layer_bank.sv
+  - ../rtl/img_data_fifo.sv
+  - ../rtl/binarize_input.sv
+  - ../rtl/stream_managing/config_manager.sv
+  - ../rtl/stream_managing/data_in_manager.sv
+  - ../rtl/stream_managing/shift_reg.sv
+  - ../rtl/neuron/neuron.sv
+  - ../rtl/neuron/neuron_cont.sv
+  - ../rtl/neuron/neuron_struct.sv
+  - ../rtl/neuron/neuron_top.sv
+  - ../rtl/neuron/neuron_top_cont.sv
+  - ../rtl/neuron/neuron_top_struct.sv
 
 parameters:
   USE_CUSTOM_TOPOLOGY: [0]
