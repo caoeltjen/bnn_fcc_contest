@@ -1,0 +1,825 @@
+m255
+K4
+z2
+Z0 !s99 nomlopt
+!s11f vlog 2023.3 2023.07, Jul 17 2023
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z1 d/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/openflex/build_questa
+Yaxi4_stream_if
+Z2 2/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/bnn_fcc.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/axi4_stream_if.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/threshold_bram.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/weight_bram.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/blk_mem_gen_v8_4.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/layer_bank.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/img_data_fifo.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/binarize_input.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/config_manager.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/data_in_manager.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/shift_reg.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_cont.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_struct.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_cont.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_struct.sv
+Z3 DXx6 sv_std 3 std 0 22 9oUSJO;AeEaW`l:M@^WG92
+Z4 !s110 1776473092
+!i10b 1
+!s100 a?WJ5i;W7<a[68;3ZfmNh1
+IFl=kPnRflm;4b9<M6eB4F0
+S1
+R1
+Z5 w1776127710
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/axi4_stream_if.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/axi4_stream_if.sv
+!i122 0
+L0 8 0
+Z6 VDg1SIo80bB@j0V0VzS_@n1
+Z7 OL;L;2023.3;77
+r1
+!s85 0
+31
+Z8 !s108 1776473092.000000
+Z9 !s107 /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_struct.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_cont.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_struct.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_cont.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/shift_reg.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/data_in_manager.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/config_manager.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/binarize_input.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/img_data_fifo.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/layer_bank.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/blk_mem_gen_v8_4.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/weight_bram.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/threshold_bram.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/axi4_stream_if.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/bnn_fcc.sv|
+Z10 !s90 -64|-sv|-timescale=1ns/100ps|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/bnn_fcc.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/axi4_stream_if.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/threshold_bram.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/weight_bram.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/blk_mem_gen_v8_4.v|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/layer_bank.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/img_data_fifo.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/binarize_input.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/config_manager.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/data_in_manager.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/shift_reg.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_cont.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_struct.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_cont.sv|/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_struct.sv|-work|qrun.out/work|-statslog|qrun.out/stats_log|-writesessionid|+qrun.out/top_dus|-csession=incr|-csessionid=0|
+!i113 0
+Z11 o-64 -sv -timescale=1ns/100ps -work qrun.out/work -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+Z12 tCvgOpt 0
+vbeh_vlog_ff_ce_clr_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 U5<89g4z>]A2P7<@jT1l<3
+I0V:k1L`A8_E<=?EehmP091
+S1
+R1
+Z13 w1776138565
+Z14 8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/blk_mem_gen_v8_4.v
+Z15 F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/blk_mem_gen_v8_4.v
+!i122 0
+L0 148 17
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vbeh_vlog_ff_clr_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 S0>N1O_[14lo8kbn8iNci1
+I@628BcTK2PjKMj4lO`aM<2
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 109 19
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vbeh_vlog_ff_pre_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 9fHb_0l_?d]NkHgIfnnHM2
+Iae018kg7_42>o^kiXlfQg2
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 129 18
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vbeh_vlog_muxf7_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 :OB56e=lY`i^SXDTSf?N00
+I<?UV?Ilg0_0Qc6nBgU0=U1
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 95 13
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vbinarize_input
+R2
+R3
+R4
+!i10b 1
+!s100 AJf`Vg=709aS2:oK6[2UA0
+I;SSnM0bibHi298?PJ]gNL3
+S1
+R1
+w1776128111
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/binarize_input.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/binarize_input.sv
+!i122 0
+L0 1 17
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_axi_read_wrapper_beh_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 @hMhRFT=d?ZM]01OX[6bI3
+IeQEM9ooXNJ3o[hfR=Q1oZ1
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 1270 222
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_axi_regs_fwd_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 D<Q6V^@[0oXa`BJ_5`@Hi2
+I`J^B3oe2n<XFbfeo5__640
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 1493 62
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_axi_write_wrapper_beh_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 SI8G6h2T5gl5LFFGADMda1
+IAG9`OcXiCI5gQCTT70khN1
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 994 275
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_gen_v8_4_5
+R2
+R3
+R4
+!i10b 1
+!s100 F;JTXG67GO:S?D^dn]YY83
+IZRPU@F9WhcjeGzih:kA=c3
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 3412 1108
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_gen_v8_4_5_mem_module
+R2
+R3
+R4
+!i10b 1
+!s100 J82jS=MQ8iT?JB[nnIhb=1
+IU0kPVOenhnSkLc>@@P5o50
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 1951 1455
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_gen_v8_4_5_output_stage
+R2
+R3
+R4
+!i10b 1
+!s100 azL;S5^VTPBSjAIUDU10J1
+IJ=Th0SRRPhnWg3S:l8D=?3
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 1563 295
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vblk_mem_gen_v8_4_5_softecc_output_reg_stage
+R2
+R3
+R4
+!i10b 1
+!s100 JXjfd@iGT00h^;Tm;7F[l3
+I>MCY@HUjDLJ0EfZRhI>lF2
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 1859 85
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vbnn_fcc
+R2
+R3
+R4
+!i10b 1
+!s100 =KFQHLSolnfP:[kHEJ98H1
+ILMP2NE=>4]<8CD9iW0]@52
+S1
+R1
+Z16 w1776464625
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/bnn_fcc.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/bnn_fcc.sv
+!i122 0
+L0 1 1043
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vbnn_fcc_tb
+R2
+R3
+DXx4 work 14 bnn_fcc_tb_pkg 0 22 0[V7`[m@eUNm3nkZ5l<en0
+R4
+!i10b 1
+!s100 8j7CWTD?DY:G2zH6ijE451
+I30`oMUM[`Xk8ai03mnbeN3
+S1
+R1
+R16
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb.sv
+!i122 0
+L0 85 382
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+Xbnn_fcc_tb_pkg
+R2
+R3
+R4
+!i10b 1
+!s100 <m15F_^79o5Z8jcmK]7;z0
+I0[V7`[m@eUNm3nkZ5l<en0
+S1
+R1
+R5
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv
+!i122 0
+L0 13 0
+V0[V7`[m@eUNm3nkZ5l<en0
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vconfig_manager
+R2
+R3
+R4
+!i10b 1
+!s100 ]S76Qlf^m4Eg7JQQBg65W3
+I4jE8LHLnCM26n5Mj75m>P1
+S1
+R1
+Z17 w1776460961
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/config_manager.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/config_manager.sv
+!i122 0
+L0 1 288
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vdata_in_manager
+R2
+R3
+R4
+!i10b 1
+!s100 @mgG:Y;]S3j]eM]X?6:AU2
+I00e[[4nfJ;5lnBGdWQ9213
+S1
+R1
+R17
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/data_in_manager.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/data_in_manager.sv
+!i122 0
+L0 1 152
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vimg_data_fifo
+R2
+R3
+R4
+!i10b 1
+!s100 CTN_62Dz0CFbi]_LJ0KS01
+InEzhHV8XW>G<^H5VH<@3C1
+S1
+R1
+w1776460931
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/img_data_fifo.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/img_data_fifo.sv
+!i122 0
+L0 1 97
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vlayer_bank
+R2
+R3
+R4
+!i10b 1
+!s100 7R6<O83QK>:RlAgU6c3DK0
+IX_]W2[;4mgj4MX1a:GcNM3
+S1
+R1
+w1776465940
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/layer_bank.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/layer_bank.sv
+!i122 0
+L0 1 106
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vneuron
+R2
+R3
+R4
+!i10b 1
+!s100 ?UY4_ll>DzHSW5?LKd4zT1
+IgVUginEbdMB`6OFonTHI=2
+S1
+R1
+R5
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron.sv
+!i122 0
+L0 1 48
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vneuron_cont
+R2
+R3
+R4
+!i10b 1
+!s100 n@Xh7870j@fMdlg8==99;2
+IhMBW8lf;ceED28Gdh^H3S0
+S1
+R1
+w1776351620
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_cont.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_cont.sv
+!i122 0
+L0 1 34
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vneuron_struct
+R2
+R3
+R4
+!i10b 1
+!s100 H81zXd@nLM=D`JT0WoKbj0
+ImeN1RXh[H3Z_gT>`G@nh<1
+S1
+R1
+R5
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_struct.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_struct.sv
+!i122 0
+L0 1 71
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vneuron_top
+R2
+R3
+R4
+!i10b 1
+!s100 RgE>ik3OFl^^iF80c01hZ2
+IWA@e@SY60HOUJja2[:Xl^2
+S1
+R1
+Z18 w1776346603
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top.sv
+!i122 0
+Z19 L0 1 85
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vneuron_top_cont
+R2
+R3
+R4
+!i10b 1
+!s100 X528ozM@omgll2VI=RPb60
+IePm4g7JiAgQ`9jYhJ^V`>3
+S1
+R1
+R18
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_cont.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_cont.sv
+!i122 0
+R19
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vneuron_top_struct
+R2
+R3
+R4
+!i10b 1
+!s100 ]IO@Lk8LL9zI@PN?e4JUi3
+INF_aCWz8A5nBKoSETilUj1
+S1
+R1
+R18
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_struct.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_struct.sv
+!i122 0
+L0 1 138
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+Tqrun_opt
+!s110 1776473093
+VRO8hDc`nz8?^0d<CJFAOD0
+04 10 4 work bnn_fcc_tb fast 0
+R0
+!s12b OEM100
+!s124 OEM100
+o-timescale=1ns/100ps -g USE_CUSTOM_TOPOLOGY=0 -g TOGGLE_DATA_OUT_READY=1 -g CONFIG_VALID_PROBABILITY=0.8 -g DATA_IN_VALID_PROBABILITY=0.8 -g INPUT_DATA_WIDTH=8 -g INPUT_BUS_WIDTH=64 -g CONFIG_BUS_WIDTH=64 -g OUTPUT_DATA_WIDTH=4 -g OUTPUT_BUS_WIDTH=8 -g TOTAL_LAYERS=4 -g BASE_DIR=../../python -work qrun.out/work
+R12
+nqrun_opt
+OL;O;2023.3;77
+vread_netlist_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 AC9^iZMVk]h=PFUMMeNnT3
+IXkIci3[BMbkezmS4j>KV01
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 635 357
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vshift_reg
+R2
+R3
+R4
+!i10b 1
+!s100 4eTDJ92@8WGk`NnT56>ZX2
+IF84M9V95817E=HZ7]ngCR1
+S1
+R1
+R17
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/shift_reg.sv
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/shift_reg.sv
+!i122 0
+L0 1 414
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vSTATE_LOGIC_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 kL6kaK]7PCXD2jmGL3^EW1
+I<bT=PQeSzLid3nPh01N4j1
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 73 21
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+n@s@t@a@t@e_@l@o@g@i@c_v8_4
+vthreshold_bram
+R2
+R3
+R4
+!i10b 1
+!s100 IlD7>el8IHfbWIhFCjDlS3
+IOo9a0lcYHaYlloJneLi:i2
+S1
+R1
+w1776138525
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/threshold_bram.v
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/threshold_bram.v
+!i122 0
+Z20 L0 56 184
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vweight_bram
+R2
+R3
+R4
+!i10b 1
+!s100 5n<=iFRQdAWO^C;nj8X2g0
+IT35z1F3Ef?Mh8WgZ^9og=3
+S1
+R1
+w1776138967
+8/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/weight_bram.v
+F/ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/weight_bram.v
+!i122 0
+R20
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12
+vwrite_netlist_v8_4
+R2
+R3
+R4
+!i10b 1
+!s100 n6a<d0DUdbNN<GF9JehKg2
+IQ`Ah5D_k8g]^b_l^JEAMj3
+S1
+R1
+R13
+R14
+R15
+!i122 0
+L0 166 467
+R6
+R7
+r1
+!s85 0
+31
+R8
+R9
+R10
+!i113 0
+R11
+R12

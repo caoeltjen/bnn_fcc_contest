@@ -14,8 +14,6 @@ files:
   # These are common to all projects.
   - ../rtl/bnn_fcc.sv
   - rtl/bnn_fcc_timing.sv
-  - ../vivado_ip/bnn_synthesis.srcs/sources_1/ip/weight_bram/weight_bram_stub.v
-  - ../vivado_ip/bnn_synthesis.gen/sources_1/ip/threshold_bram/threshold_bram_stub.v
   - ../rtl/layer_bank.sv
   - ../rtl/img_data_fifo.sv
   - ../rtl/binarize_input.sv

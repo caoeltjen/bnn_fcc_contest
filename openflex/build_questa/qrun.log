@@ -1,0 +1,325 @@
+QuestaSim-64 qrun 2023.3 Utility 2023.07 Jul 17 2023
+Start time: 20:54:02 on Apr 17,2026
+qrun -64 -sv -timescale=1ns/100ps -g USE_CUSTOM_TOPOLOGY=0 -g TOGGLE_DATA_OUT_READY=1 -g CONFIG_VALID_PROBABILITY=0.8 -g DATA_IN_VALID_PROBABILITY=0.8 -g INPUT_DATA_WIDTH=8 -g INPUT_BUS_WIDTH=64 -g CONFIG_BUS_WIDTH=64 -g OUTPUT_DATA_WIDTH=4 -g OUTPUT_BUS_WIDTH=8 -g TOTAL_LAYERS=4 -g BASE_DIR=../../python /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/bnn_fcc.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/axi4_stream_if.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb_pkg.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/verification/bnn_fcc_tb.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/threshold_bram.v /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/weight_bram.v /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/bram/blk_mem_gen_v8_4.v /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/layer_bank.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/img_data_fifo.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/binarize_input.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/config_manager.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/data_in_manager.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/stream_managing/shift_reg.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_cont.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_struct.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_cont.sv /ecel/UFAD/ca.oeltjen/Desktop/BNN/bnn_fcc_contest/rtl/neuron/neuron_top_struct.sv -top bnn_fcc_tb 
+-- Skipping 'vlog -64 -sv -timescale=1ns/100ps /ecel/UFAD/ca.oeltjen/Desk...'
+-- Skipping vopt
+# vsim -64 -lib qrun.out/work -c -do "run -all; quit -f" -statslog qrun.out/stats_log qrun_opt -appendlog -l qrun.log -csession=incr -csessionid=2 
+# Start time: 20:54:03 on Apr 17,2026
+# //  Questa Sim-64
+# //  Version 2023.3 linux_x86_64 Jul 17 2023
+# //
+# //  Copyright 1991-2023 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.bnn_fcc_tb_pkg(fast)
+# Loading work.bnn_fcc_tb(fast)
+# Loading work.neuron_top(fast)
+# Loading work.neuron_top(fast__1)
+# run -all
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[0].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[0].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[1].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[1].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[2].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[2].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[3].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[3].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[4].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[4].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[5].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[5].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[6].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[6].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[7].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[7].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[8].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[8].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[9].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[9].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[10].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[10].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[11].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[11].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[12].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[12].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[13].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[13].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[14].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[14].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[15].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer0_bank_inst.GEN_NP[15].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[0].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[0].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[1].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[1].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[2].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[2].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[3].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[3].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[4].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[4].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[5].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[5].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[6].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[6].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[7].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[7].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[8].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[8].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[9].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[9].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[10].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[10].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[11].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[11].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[12].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[12].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[13].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[13].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[14].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[14].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[15].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer1_bank_inst.GEN_NP[15].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[0].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[0].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[1].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[1].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[2].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[2].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[3].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[3].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[4].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[4].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[5].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[5].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[6].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[6].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[7].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[7].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[8].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[8].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[9].u_neuron_top.neuron_top_struct_inst.weight_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+#  Block Memory Generator module loading initial data...
+#  Block Memory Generator data initialization complete.
+# Block Memory Generator module bnn_fcc_tb.DUT.layer2_bank_inst.GEN_NP[9].u_neuron_top.neuron_top_struct_inst.threshold_bram_inst.inst.native_mem_module.blk_mem_gen_v8_4_5_inst is using a behavioral model for simulation which will not precisely model memory collision behavior.
+# --- Loading Trained Model ---
+# BNN_FCC_Stimulus: Loaded 100 vectors from ../../python/test_vectors/inputs.hex
+# SV model successfully verified.
+# --- Configuration created: 4466 words (64-bit wide) ---
+# --- Loading Test Vectors ---
+# BNN_FCC_Stimulus: Loaded 100 vectors from ../../python/test_vectors/inputs.hex
+# BNN Model: 3 Layers, 784 Inputs
+#   Layer 0 (hidden): 256 Neurons
+#   Layer 1 (hidden): 256 Neurons
+#   Layer 2 (output): 10 Neurons
+# [95 ns] Streaming weights and thresholds.
+# Error: Payload byte count reached total_bytes field in header, but TLAST was not asserted. Total bytes received: 25088, total_bytes in header: 25088
+# Error: Payload byte count reached total_bytes field in header, but TLAST was not asserted. Total bytes received: 1024, total_bytes in header: 1024
+# Error: Payload byte count reached total_bytes field in header, but TLAST was not asserted. Total bytes received: 8192, total_bytes in header: 8192
+# Error: Payload byte count reached total_bytes field in header, but TLAST was not asserted. Total bytes received: 1024, total_bytes in header: 1024
+# [55415 ns] Streaming image 0.
+# [56605 ns] Streaming image 1.
+# [57865 ns] Streaming image 2.
+# [59035 ns] Streaming image 3.
+# [60295 ns] Streaming image 4.
+# [61505 ns] Streaming image 5.
+# [62665 ns] Streaming image 6.
+# [63895 ns] Streaming image 7.
+# [65125 ns] Streaming image 8.
+# [66375 ns] Streaming image 9.
+# [67725 ns] Streaming image 10.
+# [69005 ns] Streaming image 11.
+# [70245 ns] Streaming image 12.
+# [71555 ns] Streaming image 13.
+# [72695 ns] Streaming image 14.
+# [73925 ns] Streaming image 15.
+# [75055 ns] Streaming image 16.
+# [76285 ns] Streaming image 17.
+# [77605 ns] Streaming image 18.
+# [78745 ns] Streaming image 19.
+# [79975 ns] Streaming image 20.
+# [81145 ns] Streaming image 21.
+# [82355 ns] Streaming image 22.
+# [83555 ns] Streaming image 23.
+# [84785 ns] Streaming image 24.
+# [86025 ns] Streaming image 25.
+# [87375 ns] Streaming image 26.
+# [88735 ns] Streaming image 27.
+# [89935 ns] Streaming image 28.
+# [91185 ns] Streaming image 29.
+# [92485 ns] Streaming image 30.
+# [93685 ns] Streaming image 31.
+# [94985 ns] Streaming image 32.
+# [96175 ns] Streaming image 33.
+# [97405 ns] Streaming image 34.
+# [98625 ns] Streaming image 35.
+# [99825 ns] Streaming image 36.
+# [101035 ns] Streaming image 37.
+# [102245 ns] Streaming image 38.
+# [103445 ns] Streaming image 39.
+# [104605 ns] Streaming image 40.
+# [105845 ns] Streaming image 41.
+# [107155 ns] Streaming image 42.
+# [108415 ns] Streaming image 43.
+# [109605 ns] Streaming image 44.
+# [110855 ns] Streaming image 45.
+# [112025 ns] Streaming image 46.
+# [113225 ns] Streaming image 47.
+# [114465 ns] Streaming image 48.
+# [115735 ns] Streaming image 49.
+# [116905 ns] Streaming image 50.
+# [118085 ns] Streaming image 51.
+# [119265 ns] Streaming image 52.
+# [120425 ns] Streaming image 53.
+# [121645 ns] Streaming image 54.
+# [122905 ns] Streaming image 55.
+# [124205 ns] Streaming image 56.
+# [125385 ns] Streaming image 57.
+# [126575 ns] Streaming image 58.
+# [127865 ns] Streaming image 59.
+# [129085 ns] Streaming image 60.
+# [130355 ns] Streaming image 61.
+# [131615 ns] Streaming image 62.
+# [132925 ns] Streaming image 63.
+# [134195 ns] Streaming image 64.
+# [135425 ns] Streaming image 65.
+# [136685 ns] Streaming image 66.
+# [137995 ns] Streaming image 67.
+# [139235 ns] Streaming image 68.
+# [140475 ns] Streaming image 69.
+# [141675 ns] Streaming image 70.
+# [142935 ns] Streaming image 71.
+# [144185 ns] Streaming image 72.
+# [145415 ns] Streaming image 73.
+# [146755 ns] Streaming image 74.
+# [148035 ns] Streaming image 75.
+# [149225 ns] Streaming image 76.
+# [150485 ns] Streaming image 77.
+# [151735 ns] Streaming image 78.
+# [152885 ns] Streaming image 79.
+# [154075 ns] Streaming image 80.
+# [155395 ns] Streaming image 81.
+# [156655 ns] Streaming image 82.
+# [157925 ns] Streaming image 83.
+# [159215 ns] Streaming image 84.
+# [160505 ns] Streaming image 85.
+# [161705 ns] Streaming image 86.
+# [162975 ns] Streaming image 87.
+# [164175 ns] Streaming image 88.
+# [165315 ns] Streaming image 89.
+# [166475 ns] Streaming image 90.
+# [167755 ns] Streaming image 91.
+# [169015 ns] Streaming image 92.
+# [170295 ns] Streaming image 93.
+# [171555 ns] Streaming image 94.
+# [172755 ns] Streaming image 95.
+# [173885 ns] Streaming image 96.
+# [175155 ns] Streaming image 97.
+# [176375 ns] Streaming image 98.
+# [177445 ns] Streaming image 99.
+# [178715 ns] All images loaded, waiting for outputs.
+# [843605 ns] SUCCESS: all 100 tests completed successfully.
+# 
+# Stats:
+# Avg latency (cycles) per image: 33904.5 cycles
+# Avg latency (time) per image: 339045.4 ns
+# Avg throughput (outputs/sec): 126884.2
+# Avg throughput (cycles/output): 788.1
+#  quit -f
+# End time: 20:54:06 on Apr 17,2026, Elapsed time: 0:00:03
+# Errors: 0, Warnings: 0
+# *** Summary *********************************************
+#     qrun: Errors:   0, Warnings:   0
+#     vsim: Errors:   0, Warnings:   0
+#   Totals: Errors:   0, Warnings:   0
